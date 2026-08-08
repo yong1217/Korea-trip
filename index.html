@@ -35,7 +35,7 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 .map-card{
   position:relative;
   width:100%;
-  height:min(72vh,650px);
+  height:min(74vh,680px);
   min-height:500px;
   overflow:hidden;
   background:var(--card);
@@ -173,9 +173,10 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 @media(max-width:480px){
   .app{padding:14px 12px 28px}
   h1{font-size:29px}
-  .map-card{height:68vh;min-height:470px;border-radius:26px}
+  .map-card{height:70vh;min-height:500px;border-radius:26px}
   .dart{width:64px;height:64px}
-  .status{bottom:18px;font-size:12px}
+  .status{left:12px;bottom:16px;max-width:calc(100% - 150px);font-size:11px;padding:9px 11px}
+  .history-badge{right:12px;bottom:16px;font-size:11px;padding:8px 10px}
   .links{grid-template-columns:1fr}
   .link{min-height:56px;flex-direction:row;justify-content:flex-start;padding-left:18px}
 }
@@ -221,7 +222,7 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 
     <div class="impact" id="impact"></div>
     <div class="status" id="status">지도를 준비하고 있습니다.</div>
-    <div class="history-badge" id="historyBadge">추첨 기록 0개</div>
+    <div class="history-badge" id="historyBadge">0/159</div>
   </section>
 
   <button class="dart-button" id="dartButton" disabled>🎯 다트 던지기</button>
@@ -366,8 +367,7 @@ function saveHistory(){
 
 function updateHistoryUI(){
   if(!historyBadge) return;
-  historyBadge.textContent =
-    `추첨 기록 ${used.size}개 · 결정 ${confirmed.size}개`;
+  historyBadge.textContent = `${confirmed.size}/${candidates.length || 159}`;
 }
 
 function applyConfirmedRegions(){
@@ -394,13 +394,16 @@ async function loadMap(){
     features = collection.features;
 
     drawMap(collection);
+    resetMapZoom(0);
+    dart.style.opacity = "0";
+    impact.classList.remove("show");
     buildCandidates();
     applyConfirmedRegions();
 
     loader.style.display = "none";
     dartButton.disabled = false;
 
-    status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
+    status.textContent = "다트를 던져 여행지를 결정해보세요.";
 
   }catch(error){
     console.error(error);
@@ -459,7 +462,6 @@ function drawMap(collection){
     .append("g")
     .attr("class","regions")
     .selectAll("path")
-    .selectAll("path")
     .data(features)
     .join("path")
     .attr("class","region")
@@ -470,7 +472,7 @@ function drawMap(collection){
     })
     .on("mouseleave", function(){
       if(!throwing && !current){
-        status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
+        status.textContent = "다트를 던져 여행지를 결정해보세요.";
       }
     });
 
@@ -646,7 +648,7 @@ function resetMapZoom(duration=450){
 }
 
 function zoomMapTo(point, scale=1.72){
-  if(!mapLayer) return null;
+  if(!mapLayer) return Promise.resolve(null);
 
   const width = mapCard.clientWidth;
   const height = mapCard.clientHeight;
@@ -656,16 +658,17 @@ function zoomMapTo(point, scale=1.72){
   const tx = cx + (point[0] - cx) * scale;
   const ty = cy + (point[1] - cy) * scale;
 
-  mapLayer.interrupt()
-    .transition()
-    .duration(800)
-    .ease(d3.easeCubicInOut)
-    .attr(
-      "transform",
-      `translate(${cx - scale*cx}px,${cy - scale*cy}px) scale(${scale})`
-    );
-
-  return [tx, ty];
+  return new Promise(resolve=>{
+    mapLayer.interrupt()
+      .transition()
+      .duration(800)
+      .ease(d3.easeCubicInOut)
+      .attr(
+        "transform",
+        `translate(${cx - scale*cx}px,${cy - scale*cy}px) scale(${scale})`
+      )
+      .on("end",()=>resolve([tx,ty]));
+  });
 }
 
 /* 다트 던지기 */
@@ -710,19 +713,14 @@ async function throwDart(){
     current.featureIndexes.includes(i)
   );
 
-  showImpact(target);
+  /* 적중 직후에는 다트를 숨기고, 적중 지역 자체를 화면 중앙으로 확대한다. */
+  dart.style.opacity = "0";
+  impact.classList.remove("show");
 
-  /*
-    맞은 지역을 부드럽게 확대한다.
-    확대 후 다트/충격 표시도 확대된 지역의 위치로 함께 이동시킨다.
-  */
-  const zoomedTarget = zoomMapTo(target, 1.72);
+  const zoomedTarget = await zoomMapTo(target, 1.72);
 
   if(zoomedTarget){
-    dart.style.left = `${zoomedTarget[0]}px`;
-    dart.style.top = `${zoomedTarget[1]}px`;
-    impact.style.left = `${zoomedTarget[0]}px`;
-    impact.style.top = `${zoomedTarget[1]}px`;
+    showImpact([mapCard.clientWidth / 2, mapCard.clientHeight * .43]);
   }
 
   used.add(current.id);
@@ -732,7 +730,7 @@ async function throwDart(){
   resultDesc.textContent = current.description;
   result.classList.add("show");
 
-  status.textContent = "다트가 여행지를 선택했습니다!";
+  status.textContent = `${current.name}에 적중했습니다!`;
 
   throwing = false;
   dartButton.disabled = false;
@@ -808,7 +806,12 @@ againButton.addEventListener("click",()=>{
 
 /* 결정 */
 confirmButton.addEventListener("click",()=>{
-  if(!current) return;
+  if(!current || throwing) return;
+
+  confirmed.add(current.id);
+  saveHistory();
+  applyConfirmedRegions();
+  confirmedNote.classList.add("show");
 
   const q = encodeURIComponent(current.name);
 
@@ -854,7 +857,16 @@ resetHistoryButton.addEventListener("click",()=>{
   result.classList.remove("show");
   travelLinks.classList.remove("show");
   confirmedNote.classList.remove("show");
-  status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
+
+  // 지도 확대 상태와 다트까지 완전히 초기 상태로 복귀
+  resetMapZoom(350);
+  dart.style.opacity = "0";
+  dart.style.left = "50%";
+  dart.style.top = "89%";
+  dart.style.transform = "translate(-50%,-50%) rotate(0deg)";
+  impact.classList.remove("show");
+  impact.style.opacity = "0";
+  status.textContent = "다트를 던져 여행지를 결정해보세요.";
 });
 
 loadHistory();
