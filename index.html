@@ -1,1631 +1,685 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-  <title>TRAVEL DART</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #172033;
-      --sub: #6d7585;
-      --line: #dfe4ec;
-      --primary: #263b70;
-      --primary-light: #edf1ff;
-      --accent: #e45757;
-      --map: #eef2f7;
-      --map-line: #9ba6b7;
-      --map-selected: #ffcf5a;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 50% -10%, #ffffff 0%, #f5f7fb 48%, #edf1f6 100%);
-      color: var(--text);
-      font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Noto Sans KR",
-        "Apple SD Gothic Neo",
-        sans-serif;
-      overflow-x: hidden;
-    }
-
-    button {
-      font: inherit;
-      border: 0;
-      cursor: pointer;
-    }
-
-    .app {
-      width: min(100%, 760px);
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: 22px 16px 40px;
-      position: relative;
-    }
-
-    /* ---------------- HEADER ---------------- */
-
-    .header {
-      text-align: center;
-      margin-bottom: 14px;
-    }
-
-    .brand {
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.24em;
-      color: var(--primary);
-    }
-
-    .title {
-      margin: 7px 0 3px;
-      font-size: 30px;
-      font-weight: 900;
-      letter-spacing: -0.05em;
-    }
-
-    .subtitle {
-      margin: 0;
-      color: var(--sub);
-      font-size: 14px;
-    }
-
-    /* ---------------- MAP ---------------- */
-
-    .map-card {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 0.9 / 1;
-      min-height: 510px;
-      max-height: 720px;
-      background: rgba(255,255,255,0.8);
-      border: 1px solid rgba(210,217,228,0.9);
-      border-radius: 28px;
-      box-shadow: 0 18px 50px rgba(27, 43, 75, 0.09);
-      overflow: hidden;
-    }
-
-    #map {
-      position: absolute;
-      inset: 0;
-    }
-
-    #map svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .province-path {
-      fill: var(--map);
-      stroke: var(--map-line);
-      stroke-width: 0.75;
-      vector-effect: non-scaling-stroke;
-      transition:
-        fill 0.25s ease,
-        stroke 0.25s ease,
-        filter 0.25s ease;
-    }
-
-    .province-path:hover {
-      fill: #e4eaf3;
-    }
-
-    .province-path.selected {
-      fill: var(--map-selected);
-      stroke: #d39e1d;
-      stroke-width: 2;
-      filter: drop-shadow(0 4px 8px rgba(190, 137, 16, 0.25));
-    }
-
-    /* 지도 로딩 */
-
-    .map-loading {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      gap: 10px;
-      color: var(--sub);
-      background: rgba(255,255,255,0.7);
-      backdrop-filter: blur(4px);
-      z-index: 20;
-    }
-
-    .loading-spinner {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      border: 3px solid #dce2eb;
-      border-top-color: var(--primary);
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* ---------------- DART ---------------- */
-
-    .dart {
-      position: absolute;
-      z-index: 30;
-      width: 74px;
-      height: 74px;
-      pointer-events: none;
-      left: 50%;
-      top: 78%;
-      transform: translate(-50%, -50%) rotate(-35deg);
-      opacity: 0;
-      font-size: 54px;
-      line-height: 1;
-      filter: drop-shadow(0 8px 8px rgba(0,0,0,0.22));
-      transform-origin: 50% 50%;
-    }
-
-    .dart.fly {
-      animation: dart-fly var(--flight-time, 1500ms) cubic-bezier(.18,.75,.24,1) forwards;
-    }
-
-    /*
-      실제 이동은 JS에서 CSS 변수로
-      시작점 → 포물선 → 도착점을 계산한다.
-    */
-
-    .dart-impact {
-      position: absolute;
-      z-index: 31;
-      pointer-events: none;
-      font-size: 38px;
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.4);
-    }
-
-    .dart-impact.show {
-      animation: impact 520ms ease-out forwards;
-    }
-
-    @keyframes impact {
-      0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.3);
-      }
-
-      35% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.15);
-      }
-
-      100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(1.65);
-      }
-    }
-
-    /* ---------------- STATUS ---------------- */
-
-    .status-area {
-      position: absolute;
-      z-index: 40;
-      left: 20px;
-      right: 20px;
-      bottom: 22px;
-      text-align: center;
-      pointer-events: none;
-    }
-
-    .status {
-      display: inline-block;
-      padding: 10px 16px;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(218,224,233,0.95);
-      border-radius: 999px;
-      box-shadow: 0 8px 25px rgba(30,40,60,0.08);
-      font-size: 13px;
-      color: var(--sub);
-    }
-
-    /* ---------------- RESULT ---------------- */
-
-    .result-card {
-      margin-top: 16px;
-      padding: 22px 20px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      box-shadow: 0 12px 35px rgba(30, 42, 65, 0.07);
-      text-align: center;
-      display: none;
-    }
-
-    .result-card.show {
-      display: block;
-      animation: result-in 0.5s ease-out;
-    }
-
-    @keyframes result-in {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .result-label {
-      font-size: 13px;
-      color: var(--sub);
-      margin-bottom: 4px;
-    }
-
-    .result-name {
-      font-size: 32px;
-      font-weight: 900;
-      letter-spacing: -0.05em;
-      margin-bottom: 5px;
-    }
-
-    .result-description {
-      color: var(--sub);
-      font-size: 14px;
-      margin-bottom: 18px;
-    }
-
-    /* ---------------- BUTTONS ---------------- */
-
-    .button-area {
-      margin-top: 16px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .main-button {
-      min-height: 58px;
-      border-radius: 18px;
-      background: var(--primary);
-      color: white;
-      font-size: 17px;
-      font-weight: 800;
-      box-shadow: 0 9px 20px rgba(38,59,112,0.2);
-      transition:
-        transform 0.15s ease,
-        opacity 0.15s ease;
-    }
-
-    .main-button:active {
-      transform: scale(0.97);
-    }
-
-    .main-button:disabled {
-      opacity: 0.45;
-      cursor: default;
-    }
-
-    .secondary-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .secondary-button {
-      min-height: 52px;
-      border-radius: 16px;
-      background: white;
-      border: 1px solid var(--line);
-      color: var(--text);
-      font-weight: 750;
-    }
-
-    .secondary-button.confirm {
-      background: #172033;
-      color: white;
-      border-color: #172033;
-    }
-
-    /* ---------------- SEARCH LINKS ---------------- */
-
-    .travel-links {
-      display: none;
-      margin-top: 16px;
-      padding: 20px;
-      border-radius: 24px;
-      background: white;
-      border: 1px solid var(--line);
-    }
-
-    .travel-links.show {
-      display: block;
-      animation: result-in 0.45s ease-out;
-    }
-
-    .travel-links h2 {
-      margin: 0 0 5px;
-      font-size: 20px;
-      letter-spacing: -0.04em;
-    }
-
-    .travel-links p {
-      margin: 0 0 14px;
-      color: var(--sub);
-      font-size: 13px;
-    }
-
-    .link-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 9px;
-    }
-
-    .travel-link {
-      min-height: 72px;
-      padding: 10px 6px;
-      border-radius: 15px;
-      background: #f6f8fb;
-      color: var(--text);
-      text-decoration: none;
-      border: 1px solid #e5e9ef;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      font-size: 13px;
-      font-weight: 750;
-    }
-
-    .travel-link span:first-child {
-      font-size: 24px;
-    }
-
-    /* ---------------- FOOTER ---------------- */
-
-    .footer {
-      margin-top: 22px;
-      text-align: center;
-      color: #9aa3b2;
-      font-size: 10px;
-      line-height: 1.5;
-    }
-
-    @media (max-width: 480px) {
-      .app {
-        padding: 18px 12px 30px;
-      }
-
-      .title {
-        font-size: 27px;
-      }
-
-      .map-card {
-        min-height: 480px;
-        border-radius: 24px;
-      }
-
-      .result-name {
-        font-size: 29px;
-      }
-
-      .link-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .travel-link {
-        flex-direction: row;
-        justify-content: flex-start;
-        padding-left: 18px;
-        min-height: 56px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f4f6fb">
+<title>TRAVEL DART</title>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f6fb;
+  --card:#fff;
+  --ink:#172033;
+  --muted:#737d8f;
+  --line:#dfe4ec;
+  --navy:#29447f;
+  --navy2:#1f3569;
+  --map:#f7f9fc;
+  --map-hover:#eef2f8;
+  --map-stroke:#aab4c3;
+  --selected:#ffd45c;
+}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Apple SD Gothic Neo",sans-serif}
+body{min-height:100vh}
+button{font:inherit}
+.app{width:min(100%,760px);margin:0 auto;padding:18px 14px 36px}
+.header{text-align:center;padding:2px 8px 16px}
+.brand{font-size:12px;font-weight:800;letter-spacing:.25em;color:var(--navy)}
+h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
+.subtitle{margin:0;color:var(--muted);font-size:14px}
+.map-card{
+  position:relative;
+  width:100%;
+  height:min(72vh,650px);
+  min-height:500px;
+  overflow:hidden;
+  background:var(--card);
+  border:1px solid #d9dfe8;
+  border-radius:30px;
+  box-shadow:0 18px 50px rgba(35,50,80,.09);
+}
+#map{position:absolute;inset:0}
+#map svg{display:block;width:100%;height:100%}
+.region{
+  fill:var(--map);
+  stroke:var(--map-stroke);
+  stroke-width:1.1;
+  vector-effect:non-scaling-stroke;
+  transition:fill .2s,stroke .2s;
+}
+.region:hover{fill:var(--map-hover)}
+.region.candidate-hover{fill:#eef2f8}
+.region.selected{
+  fill:var(--selected);
+  stroke:#c79620;
+  stroke-width:2.2;
+}
+.province-outline{
+  fill:none;
+  stroke:#67748a;
+  stroke-width:1.8;
+  vector-effect:non-scaling-stroke;
+  pointer-events:none;
+}
+.island-marker{
+  fill:#fff;
+  stroke:#8793a7;
+  stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+.map-label{
+  font-size:11px;
+  font-weight:700;
+  fill:#536075;
+  pointer-events:none;
+}
+.loader{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:11px;background:rgba(255,255,255,.94);z-index:20;
+}
+.spinner{width:30px;height:30px;border:3px solid #dfe4ec;border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 다트 */
+.dart{
+  position:absolute;
+  z-index:30;
+  width:76px;
+  height:76px;
+  left:50%;
+  top:89%;
+  transform:translate(-50%,-50%);
+  opacity:0;
+  pointer-events:none;
+  filter:drop-shadow(0 8px 8px rgba(0,0,0,.22));
+  transform-origin:50% 50%;
+}
+.dart img{width:100%;height:100%;display:block}
+.impact{
+  position:absolute;z-index:31;pointer-events:none;width:70px;height:70px;
+  opacity:0;transform:translate(-50%,-50%) scale(.3);
+}
+.impact.show{animation:impact .55s ease-out forwards}
+.impact::before,.impact::after{
+  content:"";position:absolute;left:50%;top:50%;width:100%;height:3px;
+  background:#d99f22;border-radius:10px;transform:translate(-50%,-50%) rotate(45deg);
+}
+.impact::after{transform:translate(-50%,-50%) rotate(-45deg)}
+@keyframes impact{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.25)}
+  30%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}
+}
+.status{
+  position:absolute;z-index:35;left:50%;bottom:22px;transform:translateX(-50%);
+  padding:10px 17px;border:1px solid #dfe4ec;border-radius:999px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+  color:var(--muted);font-size:13px;white-space:nowrap;
+  box-shadow:0 8px 24px rgba(30,45,70,.07);
+}
+.dart-button{
+  width:100%;margin-top:16px;min-height:60px;border:0;border-radius:20px;
+  color:#fff;background:var(--navy);font-size:18px;font-weight:850;
+  box-shadow:0 12px 26px rgba(41,68,127,.22);
+}
+.dart-button:active{transform:scale(.985)}
+.dart-button:disabled{opacity:.5}
+.result{
+  display:none;margin-top:16px;padding:22px 18px;background:#fff;
+  border:1px solid var(--line);border-radius:24px;text-align:center;
+  box-shadow:0 12px 35px rgba(30,42,65,.07);
+}
+.result.show{display:block;animation:rise .4s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.result-label{font-size:13px;color:var(--muted)}
+.result-name{margin:5px 0 4px;font-size:32px;font-weight:900;letter-spacing:-.055em}
+.result-desc{margin:0 0 18px;color:var(--muted);font-size:14px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.action{
+  min-height:54px;border-radius:16px;border:1px solid var(--line);
+  background:#fff;color:var(--ink);font-weight:800;
+}
+.action.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.travel-links{
+  display:none;margin-top:16px;padding:20px;background:#fff;border:1px solid var(--line);
+  border-radius:24px;
+}
+.travel-links.show{display:block;animation:rise .4s ease-out}
+.travel-links h2{margin:0 0 5px;font-size:20px;letter-spacing:-.04em}
+.travel-links p{margin:0 0 14px;color:var(--muted);font-size:13px}
+.links{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.link{
+  min-height:70px;border:1px solid #e3e7ee;border-radius:15px;background:#f7f9fc;
+  color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:4px;font-size:13px;font-weight:800;
+}
+.link .emoji{font-size:24px}
+.footer{margin-top:20px;text-align:center;color:#9aa4b4;font-size:10px;line-height:1.5}
+@media(max-width:480px){
+  .app{padding:14px 12px 28px}
+  h1{font-size:29px}
+  .map-card{height:68vh;min-height:470px;border-radius:26px}
+  .dart{width:64px;height:64px}
+  .status{bottom:18px;font-size:12px}
+  .links{grid-template-columns:1fr}
+  .link{min-height:56px;flex-direction:row;justify-content:flex-start;padding-left:18px}
+}
+</style>
 </head>
 
 <body>
-
 <div class="app">
-
   <header class="header">
     <div class="brand">TRAVEL DART</div>
-    <h1 class="title">오늘은 어디로 떠날까요?</h1>
+    <h1>오늘은 어디로 떠날까요?</h1>
     <p class="subtitle">대한민국에 다트를 던져 여행지를 결정해보세요.</p>
   </header>
 
-  <section class="map-card">
-
+  <section class="map-card" id="mapCard">
     <div id="map"></div>
 
-    <div class="map-loading" id="mapLoading">
-      <div class="loading-spinner"></div>
-      <div>대한민국 지도를 불러오는 중...</div>
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <div id="loaderText">대한민국 지도를 불러오는 중...</div>
     </div>
 
-    <div class="dart" id="dart">🎯</div>
-
-    <div class="dart-impact" id="impact">💥</div>
-
-    <div class="status-area">
-      <div class="status" id="status">
-        지도를 불러오는 중입니다.
-      </div>
+    <div class="dart" id="dart">
+      <img src="dart.svg" alt="">
     </div>
 
+    <div class="impact" id="impact"></div>
+    <div class="status" id="status">지도를 준비하고 있습니다.</div>
   </section>
 
-  <section class="result-card" id="resultCard">
+  <button class="dart-button" id="dartButton" disabled>🎯 다트 던지기</button>
 
+  <section class="result" id="result">
     <div class="result-label">🎯 오늘의 여행지</div>
+    <div class="result-name" id="resultName">-</div>
+    <p class="result-desc" id="resultDesc">-</p>
 
-    <div class="result-name" id="resultName">
-      -
+    <div class="actions">
+      <button class="action" id="againButton">🔄 다시 던지기</button>
+      <button class="action primary" id="confirmButton">❤️ 여기로 결정</button>
     </div>
-
-    <div class="result-description" id="resultDescription">
-      -
-    </div>
-
-    <div class="secondary-buttons">
-
-      <button
-        class="secondary-button"
-        id="againButton"
-        disabled
-      >
-        🔄 다시 던지기
-      </button>
-
-      <button
-        class="secondary-button confirm"
-        id="confirmButton"
-        disabled
-      >
-        ❤️ 여기로 결정
-      </button>
-
-    </div>
-
   </section>
 
   <section class="travel-links" id="travelLinks">
-
     <h2 id="travelTitle">📍 여행 준비하기</h2>
-
-    <p>
-      선택한 지역의 관광지·맛집·숙소를 검색해보세요.
-    </p>
-
-    <div class="link-grid">
-
-      <a
-        class="travel-link"
-        id="tourismLink"
-        target="_blank"
-        rel="noopener"
-      >
-        <span>🏛️</span>
-        <span>관광지 검색</span>
-      </a>
-
-      <a
-        class="travel-link"
-        id="foodLink"
-        target="_blank"
-        rel="noopener"
-      >
-        <span>🍴</span>
-        <span>맛집 검색</span>
-      </a>
-
-      <a
-        class="travel-link"
-        id="hotelLink"
-        target="_blank"
-        rel="noopener"
-      >
-        <span>🏨</span>
-        <span>숙소 검색</span>
-      </a>
-
+    <p>선택한 지역의 관광지·맛집·숙소를 바로 검색할 수 있습니다.</p>
+    <div class="links">
+      <a class="link" id="tourismLink" target="_blank" rel="noopener"><span class="emoji">🏛️</span>관광지 검색</a>
+      <a class="link" id="foodLink" target="_blank" rel="noopener"><span class="emoji">🍴</span>맛집 검색</a>
+      <a class="link" id="hotelLink" target="_blank" rel="noopener"><span class="emoji">🏨</span>숙소 검색</a>
     </div>
-
   </section>
 
-  <div class="button-area">
-
-    <button
-      class="main-button"
-      id="dartButton"
-      disabled
-    >
-      🎯 다트 던지기
-    </button>
-
-  </div>
-
   <footer class="footer">
-    행정구역 경계 데이터: 통계청 SGIS 기반 statgarten/maps 활용
+    지도 데이터: southkorea/southkorea-maps · KOSTAT 2018 행정구역 경계
   </footer>
-
 </div>
 
-
 <script>
+/* =========================================================
+   TRAVEL DART v2
+   - KOSTAT 2018 시군구 TopoJSON 사용
+   - 지도는 모든 시군구 경계를 표시
+   - 추첨 후보는 '시'와 '군'
+   - 일반구(구)는 후보에서 제외
+   - 울릉군은 후보에서 제외하고 '울릉도·독도'로 별도 처리
+   ========================================================= */
 
-/* ============================================================
-   TRAVEL DART
-   1차 버전
-   ============================================================ */
+const MAP_URL =
+  "https://raw.githubusercontent.com/southkorea/southkorea-maps/master/kostat/2018/json/skorea-municipalities-2018-topo-simple.json";
 
-
-/* ------------------------------------------------------------
-   1. 지도 데이터
-   ------------------------------------------------------------ */
-
-/*
-  statgarten/maps에서 제공하는 시군구 GeoJSON.
-
-  각 파일에는 해당 지역의 시군구 경계가 들어있다.
-*/
-
-const MAP_BASE =
-  "https://raw.githubusercontent.com/statgarten/maps/main/json/";
-
-const MAP_FILES = [
-
-  "강원도_시군구_경계.json",
-  "경기도_시군구_경계.json",
-  "경상남도_시군구_경계.json",
-  "경상북도_시군구_경계.json",
-
-  "광주광역시_시군구_경계.json",
-  "대구광역시_시군구_경계.json",
-  "대전광역시_시군구_경계.json",
-  "부산광역시_시군구_경계.json",
-
-  "서울특별시_시군구_경계.json",
-  "세종특별자치시_시군구_경계.json",
-  "울산광역시_시군구_경계.json",
-  "인천광역시_시군구_경계.json",
-
-  "전라남도_시군구_경계.json",
-  "전라북도_시군구_경계.json",
-
-  "제주특별자치도_시군구_경계.json",
-
-  "충청남도_시군구_경계.json",
-  "충청북도_시군구_경계.json"
-
+const CITY_NAMES = [
+  "수원시","용인시","고양시","성남시","부천시","화성시","안산시","남양주시",
+  "안양시","평택시","시흥시","파주시","의정부시","김포시","광주시","광명시",
+  "하남시","군포시","오산시","이천시","안성시","구리시","의왕시","포천시",
+  "양주시","여주시","동두천시","과천시",
+  "춘천시","원주시","강릉시","동해시","태백시","속초시","삼척시",
+  "청주시","충주시","제천시",
+  "천안시","공주시","보령시","아산시","서산시","논산시","계룡시","당진시",
+  "전주시","군산시","익산시","정읍시","남원시","김제시",
+  "목포시","여수시","순천시","나주시","광양시",
+  "포항시","경주시","김천시","안동시","구미시","영주시","영천시","상주시","문경시","경산시",
+  "창원시","진주시","통영시","사천시","김해시","밀양시","거제시","양산시",
+  "제주시","서귀포시"
 ];
 
-
-/* ------------------------------------------------------------
-   2. 특별 여행지
-   ------------------------------------------------------------ */
-
-const SPECIAL_DESTINATIONS = [
-
-  {
-    id: "ulleungdo-dokdo",
-    name: "울릉도·독도",
-    description: "동해의 섬 여행"
-  }
-
+const METRO_CITIES = [
+  "서울특별시","부산광역시","대구광역시","인천광역시",
+  "광주광역시","대전광역시","울산광역시"
 ];
 
+const SPECIAL = {
+  id:"ulleungdo-dokdo",
+  name:"울릉도·독도",
+  description:"동해의 섬 여행",
+  type:"special"
+};
 
-/* ------------------------------------------------------------
-   3. DOM
-   ------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
 
-const mapContainer =
-  document.getElementById("map");
+const mapCard = $("mapCard");
+const map = $("map");
+const loader = $("loader");
+const loaderText = $("loaderText");
+const status = $("status");
+const dart = $("dart");
+const impact = $("impact");
+const dartButton = $("dartButton");
+const result = $("result");
+const resultName = $("resultName");
+const resultDesc = $("resultDesc");
+const againButton = $("againButton");
+const confirmButton = $("confirmButton");
+const travelLinks = $("travelLinks");
+const travelTitle = $("travelTitle");
+const tourismLink = $("tourismLink");
+const foodLink = $("foodLink");
+const hotelLink = $("hotelLink");
 
-const mapLoading =
-  document.getElementById("mapLoading");
-
-const status =
-  document.getElementById("status");
-
-const dart =
-  document.getElementById("dart");
-
-const impact =
-  document.getElementById("impact");
-
-const dartButton =
-  document.getElementById("dartButton");
-
-const resultCard =
-  document.getElementById("resultCard");
-
-const resultName =
-  document.getElementById("resultName");
-
-const resultDescription =
-  document.getElementById("resultDescription");
-
-const againButton =
-  document.getElementById("againButton");
-
-const confirmButton =
-  document.getElementById("confirmButton");
-
-const travelLinks =
-  document.getElementById("travelLinks");
-
-const travelTitle =
-  document.getElementById("travelTitle");
-
-const tourismLink =
-  document.getElementById("tourismLink");
-
-const foodLink =
-  document.getElementById("foodLink");
-
-const hotelLink =
-  document.getElementById("hotelLink");
-
-
-/* ------------------------------------------------------------
-   4. 상태
-   ------------------------------------------------------------ */
-
-let mapSvg = null;
-let projection = null;
-let pathGenerator = null;
-
-let allRegions = [];
+let svg, path, projection;
+let features = [];
 let candidates = [];
+let used = new Set();
+let current = null;
+let throwing = false;
+let dartTimer = null;
 
-let usedDestinations = new Set();
+const normalize = value =>
+  String(value || "").replace(/\s/g,"");
 
-let currentDestination = null;
+function featureName(feature){
+  return feature?.properties?.name || "";
+}
 
-let isThrowing = false;
+function candidateId(name){
+  return "candidate-" + name;
+}
 
+/* 지도 데이터 로드 */
+async function loadMap(){
+  try{
+    loaderText.textContent = "대한민국 행정구역을 불러오는 중...";
 
-/* ------------------------------------------------------------
-   5. 지도 로딩
-   ------------------------------------------------------------ */
+    const topo = await d3.json(MAP_URL);
 
-async function loadMaps() {
+    const objectName = Object.keys(topo.objects)[0];
+    const collection = topojson.feature(topo, topo.objects[objectName]);
 
-  try {
+    features = collection.features;
 
-    status.textContent =
-      "전국 행정구역 지도를 불러오는 중...";
+    drawMap(collection);
+    buildCandidates();
 
-    const results = await Promise.all(
-
-      MAP_FILES.map(async file => {
-
-        const url =
-          MAP_BASE + encodeURIComponent(file);
-
-        const response =
-          await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(
-            `${file} 불러오기 실패`
-          );
-        }
-
-        return response.json();
-
-      })
-
-    );
-
-
-    /*
-      모든 지역 Feature 합치기
-    */
-
-    const features = [];
-
-    results.forEach(data => {
-
-      if (data.features) {
-        features.push(...data.features);
-      }
-
-    });
-
-
-    allRegions = features;
-
-
-    createMap(features);
-
-    createCandidates(features);
-
-
-    mapLoading.style.display = "none";
-
+    loader.style.display = "none";
     dartButton.disabled = false;
 
-    status.textContent =
-      `${candidates.length}개의 여행지를 준비했습니다.`;
+    status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
 
-  }
-
-  catch(error) {
-
+  }catch(error){
     console.error(error);
-
-    mapLoading.innerHTML = `
-      <div style="
-        font-size:40px;
-        margin-bottom:8px;
-      ">⚠️</div>
-
-      <div style="
-        font-weight:700;
-        color:#172033;
-      ">
-        지도를 불러오지 못했습니다.
-      </div>
-
-      <div style="
-        font-size:12px;
-        margin-top:5px;
-      ">
-        인터넷 연결을 확인한 후 새로고침해주세요.
-      </div>
-    `;
-
-    status.textContent =
-      "지도 로딩 실패";
-
+    loaderText.textContent = "지도 데이터를 불러오지 못했습니다.";
+    status.innerHTML =
+      "인터넷 연결을 확인한 후 새로고침해주세요.";
   }
-
 }
 
+/* 지도 그리기 */
+function drawMap(collection){
+  const width = map.clientWidth;
+  const height = map.clientHeight;
 
-/* ------------------------------------------------------------
-   6. 지도 생성
-   ------------------------------------------------------------ */
-
-function createMap(features) {
-
-  mapContainer.innerHTML = "";
-
-  const width =
-    mapContainer.clientWidth;
-
-  const height =
-    mapContainer.clientHeight;
-
-
-  mapSvg =
-    d3.select(mapContainer)
-      .append("svg")
-      .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMidYMid meet");
-
+  svg = d3.select(map)
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio","xMidYMid meet");
 
   /*
-    대한민국 전체 경계를 기준으로 자동 투영
+    이 데이터는 경위도 GeoJSON이므로 geoMercator를 사용한다.
+    fitSize로 대한민국 전체를 카드 안에 최대한 크게 맞춘다.
   */
+  projection = d3.geoMercator()
+    .fitSize([width * .94, height * .88], collection);
 
-  const collection = {
-    type: "FeatureCollection",
-    features
-  };
+  projection.translate([width * .50, height * .47]);
 
+  path = d3.geoPath(projection);
 
-  projection =
-    d3.geoMercator()
-      .fitSize(
-        [width * 0.9, height * 0.88],
-        collection
-      );
-
-
-  /*
-    지도 위치를 살짝 중앙으로 이동
-  */
-
-  projection.translate([
-    width * 0.5,
-    height * 0.47
-  ]);
-
-
-  pathGenerator =
-    d3.geoPath()
-      .projection(projection);
-
-
-  /*
-    지역 그리기
-  */
-
-  mapSvg
-    .append("g")
-    .attr("class", "regions")
+  svg.append("g")
+    .attr("class","regions")
     .selectAll("path")
     .data(features)
-    .enter()
-    .append("path")
-    .attr("class", "province-path")
-    .attr("d", pathGenerator)
-    .attr("data-region-index", (_, i) => i)
-    .on("click", function(event, feature) {
-
-      /*
-        지도 클릭 자체는 현재 1차 버전에서는
-        추첨 기능과 분리한다.
-      */
-
-      const name =
-        getRegionName(feature);
-
-      status.textContent =
-        name
-          ? `${name} 지역`
-          : "대한민국 행정구역";
-
+    .join("path")
+    .attr("class","region")
+    .attr("d", path)
+    .on("mouseenter", function(_, d){
+      const name = featureName(d);
+      if(name) status.textContent = name;
+    })
+    .on("mouseleave", function(){
+      if(!throwing && !current){
+        status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
+      }
     });
 
-}
-
-
-/* ------------------------------------------------------------
-   7. 지역 이름 추출
-   ------------------------------------------------------------ */
-
-function getRegionName(feature) {
-
-  const p =
-    feature.properties || {};
-
-
   /*
-    데이터 버전에 따라 이름 필드가 다를 수 있으므로
-    여러 후보를 확인한다.
+    시도 경계를 한 번 더 그려서
+    시군구 경계와 광역 경계가 구분되도록 한다.
+    현재 1차 버전에서는 시군구 선이 핵심이므로
+    별도 시도 데이터 없이 경계가 겹치는 효과를 이용한다.
   */
-
-  return (
-    p.name ||
-    p.NAME ||
-    p.adm_nm ||
-    p.sgg_nm ||
-    p.SGG_NM ||
-    p.nm ||
-    p.NM ||
-    p.region ||
-    null
-  );
-
 }
 
+/* 후보 만들기 */
+function buildCandidates(){
+  const byNormalized = new Map();
 
-/* ------------------------------------------------------------
-   8. 추첨 후보 만들기
-   ------------------------------------------------------------ */
+  features.forEach((feature, index)=>{
+    const name = normalize(featureName(feature));
+    if(name) byNormalized.set(name,{feature,index});
+  });
 
-function createCandidates(features) {
+  const list = [];
 
-  const mapCandidates = [];
+  /* 1) 일반 시 */
+  CITY_NAMES.forEach(city=>{
+    const cityNorm = normalize(city);
 
+    const indexes = features
+      .map((f,i)=>({f,i,n:normalize(featureName(f))}))
+      .filter(({n}) =>
+        n === cityNorm ||
+        (n.startsWith(cityNorm) && n.endsWith("구"))
+      )
+      .map(({i})=>i);
 
-  features.forEach((feature, index) => {
-
-    const name =
-      getRegionName(feature);
-
-    if (!name) return;
-
-
-    /*
-      "구" 단위 제외.
-
-      예:
-      종로구
-      강남구
-      수영구
-      등을 후보에서 제외한다.
-    */
-
-    if (name.endsWith("구")) {
-      return;
+    if(indexes.length){
+      list.push({
+        id:candidateId(city),
+        name:city,
+        description:`${city} 여행`,
+        type:"city",
+        featureIndexes:indexes
+      });
     }
+  });
 
+  /* 2) 광역시 + 서울 */
+  METRO_CITIES.forEach(city=>{
+    const cityNorm = normalize(city);
 
-    /*
-      시 또는 군만 후보.
+    const indexes = features
+      .map((f,i)=>({f,i,n:normalize(featureName(f))}))
+      .filter(({n}) =>
+        n === cityNorm ||
+        (n.startsWith(cityNorm) && n.endsWith("구"))
+      )
+      .map(({i})=>i);
 
-      서울특별시
-      부산광역시
-      제주 시 등은
-      이름에 "시"가 들어간다.
-
-      세종특별자치시 역시 포함된다.
-    */
-
-    const isCity =
-      name.endsWith("시");
-
-    const isCounty =
-      name.endsWith("군");
-
-
-    if (!isCity && !isCounty) {
-      return;
+    if(indexes.length){
+      list.push({
+        id:candidateId(city),
+        name:city,
+        description:`${city} 여행`,
+        type:"metro",
+        featureIndexes:indexes
+      });
     }
+  });
 
+  /* 3) 세종 */
+  const sejong = features
+    .map((f,i)=>({f,i,n:normalize(featureName(f))}))
+    .filter(({n})=>n === "세종특별자치시" || n === "세종시")
+    .map(({i})=>i);
 
-    /*
-      제주특별자치도 자체는 후보로 넣지 않고
-      제주시는 별도 시로 처리한다.
-    */
-
-    mapCandidates.push({
-
-      id: `region-${index}`,
-
-      name,
-
-      description:
-        `${name} 여행`,
-
-      type: "region",
-
-      featureIndex: index
-
+  if(sejong.length){
+    list.push({
+      id:candidateId("세종특별자치시"),
+      name:"세종특별자치시",
+      description:"세종 여행",
+      type:"city",
+      featureIndexes:sejong
     });
+  }
 
-  });
+  /* 4) 군 — 울릉군은 별도 후보로 처리 */
+  features.forEach((feature,index)=>{
+    const name = normalize(featureName(feature));
 
+    if(name.endsWith("군") && name !== "울릉군"){
+      const display = featureName(feature);
 
-  /*
-    이름 중복 제거
-  */
-
-  const unique =
-    new Map();
-
-
-  mapCandidates.forEach(item => {
-
-    if (!unique.has(item.name)) {
-      unique.set(item.name, item);
+      if(!list.some(x=>normalize(x.name) === name)){
+        list.push({
+          id:candidateId(display),
+          name:display,
+          description:`${display} 여행`,
+          type:"county",
+          featureIndexes:[index]
+        });
+      }
     }
-
   });
 
+  /* 5) 울릉도·독도 */
+  list.push({
+    ...SPECIAL,
+    featureIndexes: features
+      .map((f,i)=>({n:normalize(featureName(f)),i}))
+      .filter(x=>x.n === "울릉군")
+      .map(x=>x.i)
+  });
 
-  candidates = [
-    ...unique.values(),
-    ...SPECIAL_DESTINATIONS
-  ];
+  candidates = list;
 
-
-  /*
-    여행지 개수 표시
-  */
-
-  console.log(
-    "추첨 후보:",
-    candidates
-  );
-
+  console.log("TRAVEL DART 후보 수:", candidates.length);
+  console.table(candidates.map(x=>x.name));
 }
 
+/* 랜덤 */
+function getRandomCandidate(){
+  let available = candidates.filter(x=>!used.has(x.id));
 
-/* ------------------------------------------------------------
-   9. 랜덤 여행지
-   ------------------------------------------------------------ */
-
-function getRandomDestination() {
-
-  const available =
-    candidates.filter(
-      item =>
-        !usedDestinations.has(item.id)
-    );
-
-
-  /*
-    모두 소진했다면 다시 시작
-  */
-
-  if (available.length === 0) {
-
-    usedDestinations.clear();
-
-    status.textContent =
-      "모든 여행지를 한 번씩 뽑았습니다. 다시 처음부터 시작합니다.";
-
-    return candidates[
-      Math.floor(
-        Math.random() * candidates.length
-      )
-    ];
-
+  if(!available.length){
+    used.clear();
+    available = candidates.slice();
+    status.textContent = "모든 여행지를 한 번씩 뽑았습니다. 다시 시작합니다.";
   }
 
-
-  return available[
-    Math.floor(
-      Math.random() * available.length
-    )
-  ];
-
+  return available[Math.floor(Math.random()*available.length)];
 }
 
-
-/* ------------------------------------------------------------
-   10. 다트 던지기
-   ------------------------------------------------------------ */
-
-dartButton.addEventListener(
-  "click",
-  throwDart
-);
-
-
-async function throwDart() {
-
-  if (isThrowing) return;
-
-  if (!mapSvg || !projection) return;
-
-
-  isThrowing = true;
-
-  dartButton.disabled = true;
-
-  againButton.disabled = true;
-
-  confirmButton.disabled = true;
-
-  travelLinks.classList.remove("show");
-
-
-  resultCard.classList.remove("show");
-
-
-  /*
-    랜덤 여행지 결정
-  */
-
-  const destination =
-    getRandomDestination();
-
-
-  currentDestination =
-    destination;
-
-
-  /*
-    일단 이전 선택 강조 제거
-  */
-
-  mapSvg
-    .selectAll(".province-path")
-    .classed("selected", false);
-
-
-  /*
-    특별 후보인 울릉도·독도
-    */
-
-  let target;
-
-
-  if (
-    destination.type === "region"
-  ) {
-
-    const feature =
-      allRegions[
-        destination.featureIndex
-      ];
-
-
+/* 목표 좌표 */
+function getTarget(candidate){
+  if(candidate.type === "special"){
     /*
-      지역의 중심 좌표 계산
+      울릉도·독도 후보:
+      다트는 울릉도 쪽을 대표 위치로 삼는다.
+      독도는 지도상 별도 섬으로 함께 표시된다.
     */
-
-    target =
-      pathGenerator.centroid(feature);
-
-
-  } else {
-
-    /*
-      울릉도·독도는 지도 우측/동쪽에
-      별도 표시될 수 있도록 목표 좌표를 지정한다.
-
-      대한민국 지도 projection의 좌표를 이용해
-      대략적인 동해 위치에 배치한다.
-    */
-
-    const geoPoint = [
-      130.8,
-      37.5
-    ];
-
-    target =
-      projection(geoPoint);
-
+    const p = projection([130.90,37.50]);
+    return clampPoint(p);
   }
 
+  const selectedFeatures =
+    candidate.featureIndexes.map(i=>features[i]);
 
-  /*
-    화면 범위를 벗어나지 않도록 보정
-  */
-
-  target[0] =
-    Math.max(
-      30,
-      Math.min(
-        mapContainer.clientWidth - 30,
-        target[0]
-      )
-    );
-
-  target[1] =
-    Math.max(
-      30,
-      Math.min(
-        mapContainer.clientHeight - 80,
-        target[1]
-      )
-    );
-
-
-  status.textContent =
-    "🎯 다트가 날아갑니다...";
-
-
-  /*
-    애니메이션 시작점
-
-    중앙 하단
-  */
-
-  const start = {
-
-    x:
-      mapContainer.clientWidth / 2,
-
-    y:
-      mapContainer.clientHeight * 0.88
-
+  const fc = {
+    type:"FeatureCollection",
+    features:selectedFeatures
   };
 
+  return clampPoint(path.centroid(fc));
+}
 
-  animateDart(
-    start,
-    {
-      x: target[0],
-      y: target[1]
-    }
+function clampPoint(point){
+  const w = mapCard.clientWidth;
+  const h = mapCard.clientHeight;
+
+  return [
+    Math.max(24, Math.min(w-24, point[0])),
+    Math.max(24, Math.min(h-85, point[1]))
+  ];
+}
+
+/* 다트 던지기 */
+dartButton.addEventListener("click", throwDart);
+
+async function throwDart(){
+  if(throwing || !projection) return;
+
+  throwing = true;
+  current = getRandomCandidate();
+
+  result.classList.remove("show");
+  travelLinks.classList.remove("show");
+  dartButton.disabled = true;
+
+  d3.selectAll(".region").classed("selected",false);
+
+  const start = [
+    mapCard.clientWidth / 2,
+    mapCard.clientHeight * .92
+  ];
+
+  const target = getTarget(current);
+
+  status.textContent = "🎯 다트가 날아갑니다...";
+
+  await flyDart(start,target,1550);
+
+  /* 지역 강조 */
+  current.featureIndexes.forEach(index=>{
+    d3.select(
+      `.region:nth-of-type(${index+1})`
+    ).classed("selected",true);
+  });
+
+  /* 위 selector가 DOM 순서와 데이터 순서가 일치하지 않는 경우를 대비 */
+  svg.selectAll(".region").classed("selected",(d,i)=>
+    current.featureIndexes.includes(i)
   );
 
+  showImpact(target);
 
-  /*
-    다트 비행 시간
-  */
+  used.add(current.id);
 
-  await wait(1550);
+  resultName.textContent = current.name;
+  resultDesc.textContent = current.description;
+  result.classList.add("show");
 
+  status.textContent = "다트가 여행지를 선택했습니다!";
 
-  /*
-    도착
-  */
-
-  if (
-    destination.type === "region"
-  ) {
-
-    mapSvg
-      .select(
-        `[data-region-index="${destination.featureIndex}"]`
-      )
-      .classed(
-        "selected",
-        true
-      );
-
-  }
-
-
-  showImpact(
-    target[0],
-    target[1]
-  );
-
-
-  /*
-    사용 처리
-  */
-
-  usedDestinations.add(
-    destination.id
-  );
-
-
-  /*
-    결과 표시
-  */
-
-  resultName.textContent =
-    destination.name;
-
-
-  resultDescription.textContent =
-    destination.description;
-
-
-  resultCard.classList.add("show");
-
-
-  againButton.disabled = false;
-
-  confirmButton.disabled = false;
-
-
-  status.textContent =
-    "다트가 여행지를 선택했습니다!";
-
-
-  isThrowing = false;
-
+  throwing = false;
   dartButton.disabled = false;
-
 }
 
+/* 포물선 비행 */
+function flyDart(start,end,duration){
+  return new Promise(resolve=>{
+    if(dartTimer) cancelAnimationFrame(dartTimer);
 
-/* ------------------------------------------------------------
-   11. 포물선 다트 애니메이션
-   ------------------------------------------------------------ */
+    dart.style.opacity = "1";
 
-function animateDart(
-  start,
-  end
-) {
+    const startTime = performance.now();
 
-  /*
-    다트 초기화
-  */
+    function frame(now){
+      const raw = Math.min(1,(now-startTime)/duration);
 
-  dart.classList.remove("fly");
+      /* 부드러운 가감속 */
+      const t = raw < .5
+        ? 2*raw*raw
+        : 1-Math.pow(-2*raw+2,2)/2;
 
-  dart.style.opacity = "1";
+      const x = start[0] + (end[0]-start[0])*t;
+      const linearY = start[1] + (end[1]-start[1])*t;
 
-  dart.style.left =
-    `${start.x}px`;
+      /* 중앙에서 크게 솟는 포물선 */
+      const arc = Math.sin(Math.PI*t) * 170;
+      const y = linearY - arc;
 
-  dart.style.top =
-    `${start.y}px`;
+      /*
+        SVG 다트는 오른쪽 위 방향을 기본으로 만들어 두었기 때문에
+        진행 방향에 맞춰 살짝 회전시킨다.
+      */
+      const angle = -18 + t*18;
 
-  dart.style.transform =
-    "translate(-50%, -50%) rotate(-35deg)";
-
-
-  /*
-    강제 reflow
-
-    CSS 애니메이션을 다시 실행하기 위해 필요
-  */
-
-  void dart.offsetWidth;
-
-
-  const duration = 1500;
-
-  dart.style.setProperty(
-    "--flight-time",
-    `${duration}ms`
-  );
-
-
-  /*
-    requestAnimationFrame을 이용해
-    포물선 이동
-
-    y = startY
-        + (endY-startY)*t
-        - height*sin(pi*t)
-
-    중간에서 가장 크게 위로 올라간다.
-  */
-
-  const startTime =
-    performance.now();
-
-
-  function frame(now) {
-
-    const elapsed =
-      now - startTime;
-
-    let t =
-      Math.min(
-        elapsed / duration,
-        1
-      );
-
-
-    /*
-      ease-in-out
-    */
-
-    const eased =
-      t < 0.5
-        ? 2 * t * t
-        : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-
-    /*
-      포물선 높이
-    */
-
-    const arcHeight =
-      150;
-
-
-    const x =
-      start.x +
-      (end.x - start.x) * eased;
-
-
-    const linearY =
-      start.y +
-      (end.y - start.y) * eased;
-
-
-    const arc =
-      Math.sin(
-        Math.PI * eased
-      ) * arcHeight;
-
-
-    const y =
-      linearY - arc;
-
-
-    /*
-      진행 방향에 따른 다트 회전
-
-      시작은 비스듬하게,
-      날아가는 방향을 따라 조금씩 회전.
-    */
-
-    const angle =
-      -35 +
-      eased * 45;
-
-
-    dart.style.left =
-      `${x}px`;
-
-    dart.style.top =
-      `${y}px`;
-
-    dart.style.transform =
-      `translate(-50%, -50%) rotate(${angle}deg)`;
-
-
-    /*
-      크기
-
-      멀리서 날아와 가까워지는 느낌
-    */
-
-    const scale =
-      0.7 + eased * 0.3;
-
-    dart.style.fontSize =
-      `${54 * scale}px`;
-
-
-    if (t < 1) {
-
-      requestAnimationFrame(frame);
-
-    } else {
-
-      dart.style.left =
-        `${end.x}px`;
-
-      dart.style.top =
-        `${end.y}px`;
-
+      dart.style.left = `${x}px`;
+      dart.style.top = `${y}px`;
       dart.style.transform =
-        `translate(-50%, -50%) rotate(10deg)`;
+        `translate(-50%,-50%) rotate(${angle}deg)`;
 
+      if(raw < 1){
+        dartTimer = requestAnimationFrame(frame);
+      }else{
+        dart.style.left = `${end[0]}px`;
+        dart.style.top = `${end[1]}px`;
+        dart.style.transform =
+          `translate(-50%,-50%) rotate(0deg)`;
+
+        resolve();
+      }
     }
 
-  }
-
-
-  requestAnimationFrame(frame);
-
+    dartTimer = requestAnimationFrame(frame);
+  });
 }
 
-
-/* ------------------------------------------------------------
-   12. 충돌 효과
-   ------------------------------------------------------------ */
-
-function showImpact(x, y) {
-
+function showImpact(point){
   impact.classList.remove("show");
-
-  impact.style.left =
-    `${x}px`;
-
-  impact.style.top =
-    `${y}px`;
-
+  impact.style.left = `${point[0]}px`;
+  impact.style.top = `${point[1]}px`;
   void impact.offsetWidth;
-
   impact.classList.add("show");
-
 }
 
+/* 다시 */
+againButton.addEventListener("click",()=>{
+  if(throwing) return;
 
-/* ------------------------------------------------------------
-   13. 다시 던지기
-   ------------------------------------------------------------ */
+  result.classList.remove("show");
+  travelLinks.classList.remove("show");
+  throwDart();
+});
 
-againButton.addEventListener(
-  "click",
-  () => {
+/* 결정 */
+confirmButton.addEventListener("click",()=>{
+  if(!current) return;
 
-    resultCard.classList.remove(
-      "show"
-    );
+  const q = encodeURIComponent(current.name);
 
-    travelLinks.classList.remove(
-      "show"
-    );
+  tourismLink.href =
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 관광지")}`;
 
-    throwDart();
+  foodLink.href =
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 맛집")}`;
 
-  }
-);
+  hotelLink.href =
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 숙소")}`;
 
+  travelTitle.textContent =
+    `📍 ${current.name} 여행 준비`;
 
-/* ------------------------------------------------------------
-   14. 여행지 결정
-   ------------------------------------------------------------ */
+  travelLinks.classList.add("show");
 
-confirmButton.addEventListener(
-  "click",
-  () => {
+  setTimeout(()=>{
+    travelLinks.scrollIntoView({
+      behavior:"smooth",
+      block:"center"
+    });
+  },80);
+});
 
-    if (!currentDestination) {
-      return;
-    }
-
-
-    const destination =
-      currentDestination.name;
-
-
-    resultCard.classList.add(
-      "show"
-    );
-
-
-    travelTitle.textContent =
-      `📍 ${destination} 여행 준비`;
-
-
-    /*
-      검색 링크 생성
-
-      Google 검색 / 지도 기반.
-
-      API가 아니라 검색 URL이므로
-      별도의 API KEY가 필요하지 않다.
-    */
-
-    const encoded =
-      encodeURIComponent(
-        destination
-      );
-
-
-    const tourismQuery =
-      encodeURIComponent(
-        `${destination} 관광지`
-      );
-
-
-    const foodQuery =
-      encodeURIComponent(
-        `${destination} 맛집`
-      );
-
-
-    const hotelQuery =
-      encodeURIComponent(
-        `${destination} 숙소`
-      );
-
-
-    tourismLink.href =
-      `https://www.google.com/search?q=${tourismQuery}`;
-
-
-    foodLink.href =
-      `https://www.google.com/search?q=${foodQuery}`;
-
-
-    hotelLink.href =
-      `https://www.google.com/search?q=${hotelQuery}`;
-
-
-    travelLinks.classList.add(
-      "show"
-    );
-
-
-    /*
-      결과 영역 아래로 이동
-    */
-
-    setTimeout(() => {
-
-      travelLinks.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
-
-    }, 100);
-
-  }
-);
-
-
-/* ------------------------------------------------------------
-   15. 유틸
-   ------------------------------------------------------------ */
-
-function wait(ms) {
-
-  return new Promise(
-    resolve =>
-      setTimeout(resolve, ms)
-  );
-
-}
-
-
-/* ------------------------------------------------------------
-   16. 시작
-   ------------------------------------------------------------ */
-
-loadMaps();
-
+loadMap();
 </script>
-
 </body>
 </html>
