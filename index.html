@@ -173,10 +173,33 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 @media(max-width:480px){
   .app{padding:14px 12px 28px}
   h1{font-size:29px}
-  .map-card{height:70vh;min-height:500px;border-radius:26px}
+  .map-card{height:68vh;min-height:500px;border-radius:26px;overflow:hidden}
   .dart{width:64px;height:64px}
-  .status{left:12px;bottom:16px;max-width:calc(100% - 150px);font-size:11px;padding:9px 11px}
-  .history-badge{right:12px;bottom:16px;font-size:11px;padding:8px 10px}
+
+  /* 모바일에서는 상태 문구와 기록 배지가 서로 침범하지 않도록
+     상태 문구 영역을 왼쪽에 고정한다. */
+  .status{
+    left:12px;
+    right:94px;
+    bottom:16px;
+    transform:none;
+    max-width:none;
+    box-sizing:border-box;
+    text-align:center;
+    white-space:normal;
+    font-size:11px;
+    line-height:1.35;
+    padding:9px 11px;
+  }
+  .history-badge{
+    right:12px;
+    bottom:16px;
+    font-size:12px;
+    padding:10px 12px;
+    min-width:64px;
+    text-align:center;
+    box-sizing:border-box;
+  }
   .links{grid-template-columns:1fr}
   .link{min-height:56px;flex-direction:row;justify-content:flex-start;padding-left:18px}
 }
@@ -423,6 +446,8 @@ function drawMap(collection){
     .attr("viewBox", `0 0 ${width} ${height}`)
     .attr("preserveAspectRatio","xMidYMid meet");
 
+  baseViewBox = [0,0,width,height];
+
   /*
     중요:
     KOSTAT TopoJSON은 TopoJSON transform이 적용된 평면 좌표 데이터다.
@@ -439,19 +464,37 @@ function drawMap(collection){
   path = d3.geoPath(projection);
 
   /*
-    기본 지도도 조금 더 크게 보여준다.
-    지도의 중심을 기준으로 1.28배 확대한다.
+    모바일 우선 기본 지도 배치
+    - 지도를 충분히 크게 보여준다.
+    - fitExtent 결과의 실제 지도 경계를 다시 계산해
+      한반도 자체의 중심이 카드 중앙에 오도록 보정한다.
+    - 이렇게 하면 화면 폭이 달라져도 모바일에서 왼쪽으로 쏠리는
+      현상이 줄어든다.
   */
+  const mobile = width <= 600;
   const baseScale = projection.scale();
   const baseTranslate = projection.translate();
+  const mapScale = mobile ? 1.24 : 1.28;
   const centerX = width / 2;
-  const centerY = height * .47;
+  const centerY = height * (mobile ? 0.46 : 0.50);
+
   projection
-    .scale(baseScale * 1.28)
+    .scale(baseScale * mapScale)
     .translate([
-      centerX + (baseTranslate[0] - centerX) * 1.28,
-      centerY + (baseTranslate[1] - centerY) * 1.28
+      centerX + (baseTranslate[0] - centerX) * mapScale,
+      centerY + (baseTranslate[1] - centerY) * mapScale
     ]);
+
+  path = d3.geoPath(projection);
+
+  // 실제 그려진 지도 범위의 중심을 화면 중앙에 맞춘다.
+  const [[bx0,by0],[bx1,by1]] = path.bounds(collection);
+  const bboxCenterX = (bx0 + bx1) / 2;
+  const bboxCenterY = (by0 + by1) / 2;
+  projection.translate([
+    projection.translate()[0] + (centerX - bboxCenterX),
+    projection.translate()[1] + (centerY - bboxCenterY)
+  ]);
 
   path = d3.geoPath(projection);
 
@@ -638,36 +681,53 @@ function clampPoint(point){
   ];
 }
 
-/* 지도 확대/복귀 */
+/* 지도 확대/복귀
+   SVG group transform 대신 viewBox를 직접 바꾼다.
+   모바일 브라우저에서도 확대 중심이 정확하게 유지된다. */
+let baseViewBox = null;
+
 function resetMapZoom(duration=450){
-  if(!mapLayer) return;
-  mapLayer.interrupt()
-    .transition()
-    .duration(duration)
-    .attr("transform", null);
+  if(!svg || !baseViewBox) return Promise.resolve();
+
+  const [bx,by,bw,bh] = baseViewBox;
+  const current = (svg.attr("viewBox") || baseViewBox.join(" ")).split(/\s+/).map(Number);
+
+  return new Promise(resolve=>{
+    svg.interrupt()
+      .transition()
+      .duration(duration)
+      .ease(d3.easeCubicInOut)
+      .attrTween("viewBox",()=>{
+        const ix = d3.interpolateArray(current,[bx,by,bw,bh]);
+        return t => ix(t).join(" ");
+      })
+      .on("end",resolve);
+  });
 }
 
 function zoomMapTo(point, scale=1.72){
-  if(!mapLayer) return Promise.resolve(null);
+  if(!svg || !baseViewBox) return Promise.resolve(null);
 
-  const width = mapCard.clientWidth;
-  const height = mapCard.clientHeight;
-  const cx = width / 2;
-  const cy = height * .43;
+  const [bx,by,bw,bh] = baseViewBox;
+  const zoomWidth = bw / scale;
+  const zoomHeight = bh / scale;
 
-  const tx = cx + (point[0] - cx) * scale;
-  const ty = cy + (point[1] - cy) * scale;
+  // 적중 지점이 새 viewBox의 정중앙에 오도록 한다.
+  const targetX = point[0] - zoomWidth / 2;
+  const targetY = point[1] - zoomHeight / 2;
+  const next = [targetX,targetY,zoomWidth,zoomHeight];
+  const current = (svg.attr("viewBox") || baseViewBox.join(" ")).split(/\s+/).map(Number);
 
   return new Promise(resolve=>{
-    mapLayer.interrupt()
+    svg.interrupt()
       .transition()
-      .duration(800)
+      .duration(950)
       .ease(d3.easeCubicInOut)
-      .attr(
-        "transform",
-        `translate(${cx - scale*cx}px,${cy - scale*cy}px) scale(${scale})`
-      )
-      .on("end",()=>resolve([tx,ty]));
+      .attrTween("viewBox",()=>{
+        const ix = d3.interpolateArray(current,next);
+        return t => ix(t).join(" ");
+      })
+      .on("end",()=>resolve([mapCard.clientWidth/2,mapCard.clientHeight*0.46]));
   });
 }
 
