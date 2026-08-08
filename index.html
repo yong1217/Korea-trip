@@ -139,7 +139,7 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 @media(max-width:480px){
   .app{padding:14px 12px 28px}
   h1{font-size:29px}
-  .map-card{height:70vh;min-height:500px;border-radius:26px}
+  .map-card{height:68vh;min-height:470px;border-radius:26px}
   .dart{width:64px;height:64px}
   .status{bottom:18px;font-size:12px}
   .links{grid-template-columns:1fr}
@@ -336,12 +336,16 @@ function drawMap(collection){
   const baseTranslate = projection.translate();
   const centerX = width / 2;
   const centerY = height * .47;
-  const baseZoom = 1.65;
+  const baseZoom = 1.38;
+
+  // 기본 지도 위치를 화면 중앙보다 살짝 오른쪽으로 이동
+  // 모바일에서 대한민국 지도가 왼쪽으로 치우쳐 보이는 현상을 보정한다.
+  const mapShiftX = width * 0.035;
 
   projection
     .scale(baseScale * baseZoom)
     .translate([
-      centerX + (baseTranslate[0] - centerX) * baseZoom,
+      centerX + (baseTranslate[0] - centerX) * baseZoom + mapShiftX,
       centerY + (baseTranslate[1] - centerY) * baseZoom
     ]);
 
@@ -553,14 +557,14 @@ function resetMapZoom(duration=350){
   확대된 point의 좌표가 cx, cy에 오도록
   translate 값을 계산한다.
 */
-function zoomMapTo(point, scale=1.55){
+function zoomMapTo(point, scale=1.65){
   if(!mapLayer) return null;
 
   const width = mapCard.clientWidth;
   const height = mapCard.clientHeight;
 
   const cx = width / 2;
-  const cy = height * .40;
+  const cy = height * .43;
 
   const tx = cx - point[0] * scale;
   const ty = cy - point[1] * scale;
@@ -571,7 +575,7 @@ function zoomMapTo(point, scale=1.55){
     .ease(d3.easeCubicInOut)
     .attr(
       "transform",
-      `translate(${tx},${ty}) scale(${scale})`
+      `translate(${tx}px, ${ty}px) scale(${scale})`
     );
 
   /* HTML 다트가 확대 후 놓일 화면 좌표 */
@@ -625,12 +629,16 @@ async function throwDart(){
   /* 충격 표시 */
   showImpact(target);
 
+  /* 확대가 시작되면 다트는 숨긴다.
+     확대된 지도 위에 다트가 중앙으로 따라가는 현상을 방지한다. */
+  dart.style.opacity = "0";
+
   /*
     다트가 꽂힌 직후 지역 확대.
     확대 대상이 화면 중앙에 오므로
     어느 지역을 뽑아도 지도 밖으로 사라지지 않는다.
   */
-  const zoomedTarget = zoomMapTo(target,1.55);
+  const zoomedTarget = zoomMapTo(target,1.65);
 
   if(zoomedTarget){
     dart.style.left = `${zoomedTarget[0]}px`;
@@ -676,7 +684,7 @@ function flyDart(start,end,duration){
         중앙에서 위로 크게 솟는 포물선.
         다트가 아래에서 위쪽 지역으로 날아가는 느낌.
       */
-      const arc = Math.sin(Math.PI*t) * Math.min(210, mapCard.clientHeight * .29);
+      const arc = Math.sin(Math.PI*t) * Math.min(190, mapCard.clientHeight * .25);
       const y = linearY - arc;
 
       /*
