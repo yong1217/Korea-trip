@@ -343,13 +343,17 @@ function drawMap(collection){
     .attr("preserveAspectRatio","xMidYMid meet");
 
   /*
-    이 데이터는 경위도 GeoJSON이므로 geoMercator를 사용한다.
-    fitSize로 대한민국 전체를 카드 안에 최대한 크게 맞춘다.
+    중요:
+    KOSTAT TopoJSON은 TopoJSON transform이 적용된 평면 좌표 데이터다.
+    따라서 경위도용 geoMercator가 아니라 geoIdentity를 사용해야 한다.
+    reflectY(true)로 화면 좌표의 Y축 방향을 바로잡는다.
   */
-  projection = d3.geoMercator()
-    .fitSize([width * .94, height * .88], collection);
-
-  projection.translate([width * .50, height * .47]);
+  projection = d3.geoIdentity()
+    .reflectY(true)
+    .fitExtent(
+      [[28, 28], [width - 28, height - 92]],
+      collection
+    );
 
   path = d3.geoPath(projection);
 
