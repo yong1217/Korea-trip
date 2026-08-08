@@ -173,7 +173,7 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 @media(max-width:480px){
   .app{padding:14px 12px 28px}
   h1{font-size:29px}
-  .map-card{height:68vh;min-height:500px;border-radius:26px;overflow:hidden}
+  .map-card{height:70vh;min-height:520px;border-radius:26px;overflow:hidden}
   .dart{width:64px;height:64px}
 
   /* 모바일에서는 상태 문구와 기록 배지가 서로 침범하지 않도록
@@ -474,7 +474,7 @@ function drawMap(collection){
   const mobile = width <= 600;
   const baseScale = projection.scale();
   const baseTranslate = projection.translate();
-  const mapScale = mobile ? 1.24 : 1.28;
+  const mapScale = mobile ? 1.42 : 1.28;
   const centerX = width / 2;
   const centerY = height * (mobile ? 0.46 : 0.50);
 
@@ -487,10 +487,23 @@ function drawMap(collection){
 
   path = d3.geoPath(projection);
 
-  // 실제 그려진 지도 범위의 중심을 화면 중앙에 맞춘다.
-  const [[bx0,by0],[bx1,by1]] = path.bounds(collection);
+  // 실제 '한반도 본토'의 중심을 화면 중앙에 맞춘다.
+  // 제주·울릉도처럼 본토에서 떨어진 섬을 중심 계산에서 제외해
+  // 모바일 화면에서 한반도가 왼쪽으로 치우쳐 보이는 현상을 줄인다.
+  const mainlandFeatures = collection.features.filter(f => {
+    const n = normalize(f?.properties?.name);
+    return n && !n.includes("제주") && n !== "울릉군";
+  });
+
+  const mainlandCollection = {
+    type:"FeatureCollection",
+    features: mainlandFeatures.length ? mainlandFeatures : collection.features
+  };
+
+  const [[bx0,by0],[bx1,by1]] = path.bounds(mainlandCollection);
   const bboxCenterX = (bx0 + bx1) / 2;
   const bboxCenterY = (by0 + by1) / 2;
+
   projection.translate([
     projection.translate()[0] + (centerX - bboxCenterX),
     projection.translate()[1] + (centerY - bboxCenterY)
@@ -876,13 +889,13 @@ confirmButton.addEventListener("click",()=>{
   const q = encodeURIComponent(current.name);
 
   tourismLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 관광지")}`;
+    `https://search.naver.com/search.naver?query=${encodeURIComponent(current.name+" 관광지")}`;
 
   foodLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 맛집")}`;
+    `https://search.naver.com/search.naver?query=${encodeURIComponent(current.name+" 맛집")}`;
 
   hotelLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 숙소")}`;
+    `https://search.naver.com/search.naver?query=${encodeURIComponent(current.name+" 숙소")}`;
 
   travelTitle.textContent =
     `📍 ${current.name} 여행 준비`;
