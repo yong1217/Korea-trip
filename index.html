@@ -336,7 +336,7 @@ function drawMap(collection){
   const baseTranslate = projection.translate();
   const centerX = width / 2;
   const centerY = height * .47;
-  const baseZoom = 1.50;
+  const baseZoom = 1.65;
 
   projection
     .scale(baseScale * baseZoom)
@@ -571,7 +571,7 @@ function zoomMapTo(point, scale=1.55){
     .ease(d3.easeCubicInOut)
     .attr(
       "transform",
-      `translate(${tx}px, ${ty}px) scale(${scale})`
+      `translate(${tx},${ty}) scale(${scale})`
     );
 
   /* HTML 다트가 확대 후 놓일 화면 좌표 */
