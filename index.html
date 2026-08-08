@@ -18,15 +18,13 @@
   --muted:#737d8f;
   --line:#dfe4ec;
   --navy:#29447f;
+  --navy2:#1f3569;
   --map:#f7f9fc;
   --map-hover:#eef2f8;
   --map-stroke:#aab4c3;
   --selected:#ffd45c;
 }
-html,body{
-  margin:0;padding:0;background:var(--bg);color:var(--ink);
-  font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Apple SD Gothic Neo",sans-serif
-}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Apple SD Gothic Neo",sans-serif}
 body{min-height:100vh}
 button{font:inherit}
 .app{width:min(100%,760px);margin:0 auto;padding:18px 14px 36px}
@@ -34,49 +32,92 @@ button{font:inherit}
 .brand{font-size:12px;font-weight:800;letter-spacing:.25em;color:var(--navy)}
 h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 .subtitle{margin:0;color:var(--muted);font-size:14px}
-
 .map-card{
-  position:relative;width:100%;height:min(72vh,650px);min-height:500px;
-  overflow:hidden;background:var(--card);border:1px solid #d9dfe8;
-  border-radius:30px;box-shadow:0 18px 50px rgba(35,50,80,.09)
+  position:relative;
+  width:100%;
+  height:min(72vh,650px);
+  min-height:500px;
+  overflow:hidden;
+  background:var(--card);
+  border:1px solid #d9dfe8;
+  border-radius:30px;
+  box-shadow:0 18px 50px rgba(35,50,80,.09);
 }
 #map{position:absolute;inset:0}
 #map svg{display:block;width:100%;height:100%}
 .region{
-  fill:var(--map);stroke:var(--map-stroke);stroke-width:1.1;
-  vector-effect:non-scaling-stroke;transition:fill .2s,stroke .2s
+  fill:var(--map);
+  stroke:var(--map-stroke);
+  stroke-width:1.1;
+  vector-effect:non-scaling-stroke;
+  transition:fill .2s,stroke .2s;
 }
 .region:hover{fill:var(--map-hover)}
-.region.selected{fill:var(--selected);stroke:#c79620;stroke-width:2.2}
-
+.region.candidate-hover{fill:#eef2f8}
+.region.selected{
+  fill:var(--selected);
+  stroke:#c79620;
+  stroke-width:2.2;
+}
+.region.confirmed{
+  fill:#b9d8ff;
+  stroke:#3569a8;
+  stroke-width:2;
+}
+.region.confirmed.selected{
+  fill:var(--selected);
+  stroke:#c79620;
+  stroke-width:2.2;
+}
+.province-outline{
+  fill:none;
+  stroke:#67748a;
+  stroke-width:1.8;
+  vector-effect:non-scaling-stroke;
+  pointer-events:none;
+}
+.island-marker{
+  fill:#fff;
+  stroke:#8793a7;
+  stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+.map-label{
+  font-size:11px;
+  font-weight:700;
+  fill:#536075;
+  pointer-events:none;
+}
 .loader{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:11px;background:rgba(255,255,255,.94);z-index:20
+  flex-direction:column;gap:11px;background:rgba(255,255,255,.94);z-index:20;
 }
-.spinner{
-  width:30px;height:30px;border:3px solid #dfe4ec;border-top-color:var(--navy);
-  border-radius:50%;animation:spin .8s linear infinite
-}
+.spinner{width:30px;height:30px;border:3px solid #dfe4ec;border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* 다트 */
 .dart{
-  position:absolute;z-index:30;width:76px;height:76px;
-  left:50%;top:92%;transform:translate(-50%,-50%);
-  opacity:0;pointer-events:none;
+  position:absolute;
+  z-index:30;
+  width:76px;
+  height:76px;
+  left:50%;
+  top:89%;
+  transform:translate(-50%,-50%);
+  opacity:0;
+  pointer-events:none;
   filter:drop-shadow(0 8px 8px rgba(0,0,0,.22));
-  transform-origin:50% 50%
+  transform-origin:50% 50%;
 }
 .dart img{width:100%;height:100%;display:block}
-
 .impact{
   position:absolute;z-index:31;pointer-events:none;width:70px;height:70px;
-  opacity:0;transform:translate(-50%,-50%) scale(.3)
+  opacity:0;transform:translate(-50%,-50%) scale(.3);
 }
 .impact.show{animation:impact .55s ease-out forwards}
 .impact::before,.impact::after{
   content:"";position:absolute;left:50%;top:50%;width:100%;height:3px;
-  background:#d99f22;border-radius:10px;transform:translate(-50%,-50%) rotate(45deg)
+  background:#d99f22;border-radius:10px;transform:translate(-50%,-50%) rotate(45deg);
 }
 .impact::after{transform:translate(-50%,-50%) rotate(-45deg)}
 @keyframes impact{
@@ -84,45 +125,39 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
   30%{opacity:1;transform:translate(-50%,-50%) scale(1)}
   100%{opacity:0;transform:translate(-50%,-50%) scale(1.45)}
 }
-
 .status{
   position:absolute;z-index:35;left:50%;bottom:22px;transform:translateX(-50%);
   padding:10px 17px;border:1px solid #dfe4ec;border-radius:999px;
   background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
   color:var(--muted);font-size:13px;white-space:nowrap;
-  box-shadow:0 8px 24px rgba(30,45,70,.07)
+  box-shadow:0 8px 24px rgba(30,45,70,.07);
 }
 .dart-button{
   width:100%;margin-top:16px;min-height:60px;border:0;border-radius:20px;
   color:#fff;background:var(--navy);font-size:18px;font-weight:850;
-  box-shadow:0 12px 26px rgba(41,68,127,.22)
+  box-shadow:0 12px 26px rgba(41,68,127,.22);
 }
 .dart-button:active{transform:scale(.985)}
 .dart-button:disabled{opacity:.5}
-
 .result{
   display:none;margin-top:16px;padding:22px 18px;background:#fff;
   border:1px solid var(--line);border-radius:24px;text-align:center;
-  box-shadow:0 12px 35px rgba(30,42,65,.07)
+  box-shadow:0 12px 35px rgba(30,42,65,.07);
 }
 .result.show{display:block;animation:rise .4s ease-out}
-@keyframes rise{
-  from{opacity:0;transform:translateY(12px)}
-  to{opacity:1;transform:none}
-}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .result-label{font-size:13px;color:var(--muted)}
 .result-name{margin:5px 0 4px;font-size:32px;font-weight:900;letter-spacing:-.055em}
 .result-desc{margin:0 0 18px;color:var(--muted);font-size:14px}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .action{
   min-height:54px;border-radius:16px;border:1px solid var(--line);
-  background:#fff;color:var(--ink);font-weight:800
+  background:#fff;color:var(--ink);font-weight:800;
 }
 .action.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
-
 .travel-links{
-  display:none;margin-top:16px;padding:20px;background:#fff;
-  border:1px solid var(--line);border-radius:24px
+  display:none;margin-top:16px;padding:20px;background:#fff;border:1px solid var(--line);
+  border-radius:24px;
 }
 .travel-links.show{display:block;animation:rise .4s ease-out}
 .travel-links h2{margin:0 0 5px;font-size:20px;letter-spacing:-.04em}
@@ -130,12 +165,11 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 .links{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 .link{
   min-height:70px;border:1px solid #e3e7ee;border-radius:15px;background:#f7f9fc;
-  color:var(--ink);text-decoration:none;display:flex;align-items:center;
-  justify-content:center;flex-direction:column;gap:4px;font-size:13px;font-weight:800
+  color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:4px;font-size:13px;font-weight:800;
 }
 .link .emoji{font-size:24px}
 .footer{margin-top:20px;text-align:center;color:#9aa4b4;font-size:10px;line-height:1.5}
-
 @media(max-width:480px){
   .app{padding:14px 12px 28px}
   h1{font-size:29px}
@@ -145,6 +179,23 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
   .links{grid-template-columns:1fr}
   .link{min-height:56px;flex-direction:row;justify-content:flex-start;padding-left:18px}
 }
+
+.history-badge{
+  position:absolute;z-index:35;right:16px;bottom:18px;
+  padding:8px 12px;border:1px solid #dfe4ec;border-radius:999px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(8px);
+  color:#69758a;font-size:11px;font-weight:800;
+  box-shadow:0 6px 18px rgba(30,45,70,.06)
+}
+.reset-history{
+  margin-top:11px;width:100%;min-height:42px;border:0;border-radius:13px;
+  background:#f1f3f7;color:#687286;font-size:13px;font-weight:800
+}
+.confirmed-note{
+  display:none;margin-top:9px;color:#3569a8;font-size:12px;font-weight:800
+}
+.confirmed-note.show{display:block}
+
 </style>
 </head>
 
@@ -165,11 +216,12 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
     </div>
 
     <div class="dart" id="dart">
-      <img src="dart.svg" alt="다트">
+      <img src="dart.svg" alt="">
     </div>
 
     <div class="impact" id="impact"></div>
     <div class="status" id="status">지도를 준비하고 있습니다.</div>
+    <div class="history-badge" id="historyBadge">추첨 기록 0개</div>
   </section>
 
   <button class="dart-button" id="dartButton" disabled>🎯 다트 던지기</button>
@@ -183,21 +235,17 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
       <button class="action" id="againButton">🔄 다시 던지기</button>
       <button class="action primary" id="confirmButton">❤️ 여기로 결정</button>
     </div>
+    <div class="confirmed-note" id="confirmedNote">💙 이 지역은 여행지로 결정되어 지도에 표시됩니다.</div>
+    <button class="reset-history" id="resetHistoryButton">🧹 추첨 기록·결정 지역 초기화</button>
   </section>
 
   <section class="travel-links" id="travelLinks">
     <h2 id="travelTitle">📍 여행 준비하기</h2>
     <p>선택한 지역의 관광지·맛집·숙소를 바로 검색할 수 있습니다.</p>
     <div class="links">
-      <a class="link" id="tourismLink" target="_blank" rel="noopener">
-        <span class="emoji">🏛️</span>관광지 검색
-      </a>
-      <a class="link" id="foodLink" target="_blank" rel="noopener">
-        <span class="emoji">🍴</span>맛집 검색
-      </a>
-      <a class="link" id="hotelLink" target="_blank" rel="noopener">
-        <span class="emoji">🏨</span>숙소 검색
-      </a>
+      <a class="link" id="tourismLink" target="_blank" rel="noopener"><span class="emoji">🏛️</span>관광지 검색</a>
+      <a class="link" id="foodLink" target="_blank" rel="noopener"><span class="emoji">🍴</span>맛집 검색</a>
+      <a class="link" id="hotelLink" target="_blank" rel="noopener"><span class="emoji">🏨</span>숙소 검색</a>
     </div>
   </section>
 
@@ -208,14 +256,12 @@ h1{margin:7px 0 5px;font-size:31px;line-height:1.15;letter-spacing:-.055em}
 
 <script>
 /* =========================================================
-   TRAVEL DART v3
-   - KOSTAT 2018 시군구 TopoJSON
-   - 지도에는 시군구 경계 표시
-   - 후보는 시/군 단위
-   - 광역시/서울/세종 포함
-   - 울릉군은 일반 후보에서 제외하고 울릉도·독도로 통합
-   - 다트가 하단에서 포물선으로 날아감
-   - 적중 지역을 화면 중앙으로 이동시키며 확대
+   TRAVEL DART v2
+   - KOSTAT 2018 시군구 TopoJSON 사용
+   - 지도는 모든 시군구 경계를 표시
+   - 추첨 후보는 '시'와 '군'
+   - 일반구(구)는 후보에서 제외
+   - 울릉군은 후보에서 제외하고 '울릉도·독도'로 별도 처리
    ========================================================= */
 
 const MAP_URL =
@@ -268,16 +314,24 @@ const travelTitle = $("travelTitle");
 const tourismLink = $("tourismLink");
 const foodLink = $("foodLink");
 const hotelLink = $("hotelLink");
+const historyBadge = $("historyBadge");
+const resetHistoryButton = $("resetHistoryButton");
+const confirmedNote = $("confirmedNote");
 
 let svg, path, projection, mapLayer;
 let features = [];
 let candidates = [];
 let used = new Set();
+let confirmed = new Set();
+
+const STORAGE_USED = "travelDart.used.v1";
+const STORAGE_CONFIRMED = "travelDart.confirmed.v1";
 let current = null;
 let throwing = false;
 let dartTimer = null;
 
-const normalize = value => String(value || "").replace(/\s/g,"");
+const normalize = value =>
+  String(value || "").replace(/\s/g,"");
 
 function featureName(feature){
   return feature?.properties?.name || "";
@@ -287,12 +341,53 @@ function candidateId(name){
   return "candidate-" + name;
 }
 
-/* 지도 로드 */
+/* 추첨 기록 저장/불러오기 */
+function loadHistory(){
+  try{
+    const savedUsed = JSON.parse(localStorage.getItem(STORAGE_USED) || "[]");
+    const savedConfirmed = JSON.parse(localStorage.getItem(STORAGE_CONFIRMED) || "[]");
+
+    used = new Set(Array.isArray(savedUsed) ? savedUsed : []);
+    confirmed = new Set(Array.isArray(savedConfirmed) ? savedConfirmed : []);
+  }catch(error){
+    console.warn("추첨 기록을 불러오지 못했습니다.", error);
+    used = new Set();
+    confirmed = new Set();
+  }
+
+  updateHistoryUI();
+}
+
+function saveHistory(){
+  localStorage.setItem(STORAGE_USED, JSON.stringify([...used]));
+  localStorage.setItem(STORAGE_CONFIRMED, JSON.stringify([...confirmed]));
+  updateHistoryUI();
+}
+
+function updateHistoryUI(){
+  if(!historyBadge) return;
+  historyBadge.textContent =
+    `추첨 기록 ${used.size}개 · 결정 ${confirmed.size}개`;
+}
+
+function applyConfirmedRegions(){
+  if(!svg) return;
+
+  svg.selectAll(".region").classed("confirmed",(d,i)=>{
+    return [...confirmed].some(id=>{
+      const candidate = candidates.find(c=>c.id === id);
+      return candidate?.featureIndexes.includes(i);
+    });
+  });
+}
+
+/* 지도 데이터 로드 */
 async function loadMap(){
   try{
     loaderText.textContent = "대한민국 행정구역을 불러오는 중...";
 
     const topo = await d3.json(MAP_URL);
+
     const objectName = Object.keys(topo.objects)[0];
     const collection = topojson.feature(topo, topo.objects[objectName]);
 
@@ -300,14 +395,18 @@ async function loadMap(){
 
     drawMap(collection);
     buildCandidates();
+    applyConfirmedRegions();
 
     loader.style.display = "none";
     dartButton.disabled = false;
+
     status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
+
   }catch(error){
     console.error(error);
     loaderText.textContent = "지도 데이터를 불러오지 못했습니다.";
-    status.textContent = "인터넷 연결을 확인한 후 새로고침해주세요.";
+    status.innerHTML =
+      "인터넷 연결을 확인한 후 새로고침해주세요.";
   }
 }
 
@@ -322,8 +421,10 @@ function drawMap(collection){
     .attr("preserveAspectRatio","xMidYMid meet");
 
   /*
-    KOSTAT TopoJSON은 TopoJSON 좌표를 사용하므로 geoIdentity 사용.
-    기본 지도 크기를 기존보다 조금 키운다.
+    중요:
+    KOSTAT TopoJSON은 TopoJSON transform이 적용된 평면 좌표 데이터다.
+    따라서 경위도용 geoMercator가 아니라 geoIdentity를 사용해야 한다.
+    reflectY(true)로 화면 좌표의 Y축 방향을 바로잡는다.
   */
   projection = d3.geoIdentity()
     .reflectY(true)
@@ -332,21 +433,21 @@ function drawMap(collection){
       collection
     );
 
+  path = d3.geoPath(projection);
+
+  /*
+    기본 지도도 조금 더 크게 보여준다.
+    지도의 중심을 기준으로 1.28배 확대한다.
+  */
   const baseScale = projection.scale();
   const baseTranslate = projection.translate();
   const centerX = width / 2;
   const centerY = height * .47;
-  const baseZoom = 1.38;
-
-  // 기본 지도 위치를 화면 중앙보다 살짝 오른쪽으로 이동
-  // 모바일에서 대한민국 지도가 왼쪽으로 치우쳐 보이는 현상을 보정한다.
-  const mapShiftX = width * 0.105;
-
   projection
-    .scale(baseScale * baseZoom)
+    .scale(baseScale * 1.28)
     .translate([
-      centerX + (baseTranslate[0] - centerX) * baseZoom + mapShiftX,
-      centerY + (baseTranslate[1] - centerY) * baseZoom
+      centerX + (baseTranslate[0] - centerX) * 1.28,
+      centerY + (baseTranslate[1] - centerY) * 1.28
     ]);
 
   path = d3.geoPath(projection);
@@ -354,28 +455,42 @@ function drawMap(collection){
   mapLayer = svg.append("g")
     .attr("class","map-layer");
 
-  mapLayer.append("g")
+  mapLayer
+    .append("g")
     .attr("class","regions")
+    .selectAll("path")
     .selectAll("path")
     .data(features)
     .join("path")
     .attr("class","region")
     .attr("d", path)
     .on("mouseenter", function(_, d){
-      if(!throwing && !current){
-        const name = featureName(d);
-        if(name) status.textContent = name;
-      }
+      const name = featureName(d);
+      if(name) status.textContent = name;
     })
     .on("mouseleave", function(){
       if(!throwing && !current){
         status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
       }
     });
+
+  /*
+    시도 경계를 한 번 더 그려서
+    시군구 경계와 광역 경계가 구분되도록 한다.
+    현재 1차 버전에서는 시군구 선이 핵심이므로
+    별도 시도 데이터 없이 경계가 겹치는 효과를 이용한다.
+  */
 }
 
 /* 후보 만들기 */
 function buildCandidates(){
+  const byNormalized = new Map();
+
+  features.forEach((feature, index)=>{
+    const name = normalize(featureName(feature));
+    if(name) byNormalized.set(name,{feature,index});
+  });
+
   const list = [];
 
   /* 1) 일반 시 */
@@ -440,7 +555,7 @@ function buildCandidates(){
     });
   }
 
-  /* 4) 군 - 울릉군은 별도 후보 */
+  /* 4) 군 — 울릉군은 별도 후보로 처리 */
   features.forEach((feature,index)=>{
     const name = normalize(featureName(feature));
 
@@ -460,19 +575,18 @@ function buildCandidates(){
   });
 
   /* 5) 울릉도·독도 */
-  const ulleungIndexes = features
-    .map((f,i)=>({n:normalize(featureName(f)),i}))
-    .filter(x=>x.n === "울릉군")
-    .map(x=>x.i);
-
   list.push({
     ...SPECIAL,
-    featureIndexes:ulleungIndexes
+    featureIndexes: features
+      .map((f,i)=>({n:normalize(featureName(f)),i}))
+      .filter(x=>x.n === "울릉군")
+      .map(x=>x.i)
   });
 
   candidates = list;
 
   console.log("TRAVEL DART 후보 수:", candidates.length);
+  console.table(candidates.map(x=>x.name));
 }
 
 /* 랜덤 */
@@ -481,8 +595,9 @@ function getRandomCandidate(){
 
   if(!available.length){
     used.clear();
+    saveHistory();
     available = candidates.slice();
-    status.textContent = "모든 여행지를 한 번씩 뽑았습니다. 다시 시작합니다.";
+    status.textContent = "모든 여행지를 한 번씩 뽑았습니다. 새로운 추첨 라운드를 시작합니다.";
   }
 
   return available[Math.floor(Math.random()*available.length)];
@@ -490,39 +605,25 @@ function getRandomCandidate(){
 
 /* 목표 좌표 */
 function getTarget(candidate){
-  const selectedFeatures = candidate.featureIndexes
-    .map(i=>features[i])
-    .filter(Boolean);
-
-  if(!selectedFeatures.length){
-    return [
-      mapCard.clientWidth / 2,
-      mapCard.clientHeight * .45
-    ];
+  if(candidate.type === "special"){
+    /*
+      울릉도·독도 후보:
+      다트는 울릉도 쪽을 대표 위치로 삼는다.
+      독도는 지도상 별도 섬으로 함께 표시된다.
+    */
+    const p = projection([130.90,37.50]);
+    return clampPoint(p);
   }
+
+  const selectedFeatures =
+    candidate.featureIndexes.map(i=>features[i]);
 
   const fc = {
     type:"FeatureCollection",
     features:selectedFeatures
   };
 
-  /*
-    중요:
-    울릉도·독도도 경위도 좌표를 직접 넣지 않고
-    실제 지도 feature의 중심점을 사용한다.
-    기존 코드의 projection([130.90,37.50]) 방식은
-    geoIdentity와 맞지 않아 잘못된 위치를 만들 수 있었다.
-  */
-  const centroid = path.centroid(fc);
-
-  if(!Number.isFinite(centroid[0]) || !Number.isFinite(centroid[1])){
-    return [
-      mapCard.clientWidth / 2,
-      mapCard.clientHeight * .45
-    ];
-  }
-
-  return clampPoint(centroid);
+  return clampPoint(path.centroid(fc));
 }
 
 function clampPoint(point){
@@ -530,62 +631,41 @@ function clampPoint(point){
   const h = mapCard.clientHeight;
 
   return [
-    Math.max(30, Math.min(w-30, point[0])),
-    Math.max(30, Math.min(h-90, point[1]))
+    Math.max(24, Math.min(w-24, point[0])),
+    Math.max(24, Math.min(h-85, point[1]))
   ];
 }
 
-/* 지도 원상복귀 */
-function resetMapZoom(duration=350){
+/* 지도 확대/복귀 */
+function resetMapZoom(duration=450){
   if(!mapLayer) return;
-
   mapLayer.interrupt()
     .transition()
     .duration(duration)
-    .ease(d3.easeCubicInOut)
     .attr("transform", null);
 }
 
-/*
-  적중 지역을 화면 중앙으로 가져오면서 확대.
-
-  기존 코드의 문제:
-  - point를 계산해놓고 실제 transform에는 사용하지 않음
-  - 따라서 지역이 중앙으로 오지 않고 지도 전체가 화면 밖으로 밀릴 수 있음
-
-  수정:
-  확대된 point의 좌표가 cx, cy에 오도록
-  translate 값을 계산한다.
-*/
 function zoomMapTo(point, scale=1.72){
   if(!mapLayer) return null;
 
   const width = mapCard.clientWidth;
   const height = mapCard.clientHeight;
-
-  /* 확대 후 적중 지역이 화면의 정중앙보다 약간 위에 오도록 한다. */
   const cx = width / 2;
-  const cy = height * .42;
+  const cy = height * .43;
 
-  /*
-     현재 지도에서 target이 point에 있다.
-     scale 배율로 확대했을 때 target을 cx, cy로 보내려면
-     아래처럼 translate 해야 한다.
-  */
-  const tx = cx - point[0] * scale;
-  const ty = cy - point[1] * scale;
+  const tx = cx + (point[0] - cx) * scale;
+  const ty = cy + (point[1] - cy) * scale;
 
   mapLayer.interrupt()
     .transition()
-    .duration(950)
+    .duration(800)
     .ease(d3.easeCubicInOut)
     .attr(
       "transform",
-      `translate(${tx},${ty}) scale(${scale})`
+      `translate(${cx - scale*cx}px,${cy - scale*cy}px) scale(${scale})`
     );
 
-  /* 확대 상태에서는 다트를 계속 숨긴다. */
-  return [cx, cy];
+  return [tx, ty];
 }
 
 /* 다트 던지기 */
@@ -595,67 +675,58 @@ async function throwDart(){
   if(throwing || !projection) return;
 
   throwing = true;
+
+  /* 이전 결과에서 확대된 지도를 원래 크기로 되돌린다. */
+  resetMapZoom(250);
   current = getRandomCandidate();
 
   result.classList.remove("show");
   travelLinks.classList.remove("show");
+  confirmedNote.classList.remove("show");
   dartButton.disabled = true;
 
-  /* 이전 결과에서 확대된 지도를 원래 크기로 */
-  resetMapZoom(250);
+  d3.selectAll(".region").classed("selected",false);
 
-  /* 선택 표시 제거 */
-  svg.selectAll(".region").classed("selected",false);
-
-  /*
-    다트는 지도 중앙 하단에서 출발.
-    휴대폰 화면에서도 아래쪽에서 날아오는 느낌이 나도록 한다.
-  */
   const start = [
     mapCard.clientWidth / 2,
-    mapCard.clientHeight * .93
+    mapCard.clientHeight * .92
   ];
 
   const target = getTarget(current);
 
-  /* 이전 충격 효과 제거 */
-  impact.classList.remove("show");
-  dart.style.opacity = "0";
-
   status.textContent = "🎯 다트가 날아갑니다...";
 
-  await flyDart(start,target,1450);
+  await flyDart(start,target,1550);
 
   /* 지역 강조 */
-  svg.selectAll(".region").classed(
-    "selected",
-    (d,i)=>current.featureIndexes.includes(i)
+  current.featureIndexes.forEach(index=>{
+    d3.select(
+      `.region:nth-of-type(${index+1})`
+    ).classed("selected",true);
+  });
+
+  /* 위 selector가 DOM 순서와 데이터 순서가 일치하지 않는 경우를 대비 */
+  svg.selectAll(".region").classed("selected",(d,i)=>
+    current.featureIndexes.includes(i)
   );
 
-  /* 충격 표시 */
   showImpact(target);
 
-  /* 확대가 시작되면 다트는 숨긴다.
-     확대된 지도 위에 다트가 중앙으로 따라가는 현상을 방지한다. */
-  dart.style.opacity = "0";
-
   /*
-    다트가 꽂힌 직후 지역 확대.
-    확대 대상이 화면 중앙에 오므로
-    어느 지역을 뽑아도 지도 밖으로 사라지지 않는다.
+    맞은 지역을 부드럽게 확대한다.
+    확대 후 다트/충격 표시도 확대된 지역의 위치로 함께 이동시킨다.
   */
-  const zoomedTarget = zoomMapTo(target,1.72);
+  const zoomedTarget = zoomMapTo(target, 1.72);
 
   if(zoomedTarget){
-    /* 다트는 확대 화면에 절대 다시 나타나지 않게 한다. */
-    dart.style.opacity = "0";
-
-    /* 충격 효과만 확대된 적중 위치를 따라간다. */
+    dart.style.left = `${zoomedTarget[0]}px`;
+    dart.style.top = `${zoomedTarget[1]}px`;
     impact.style.left = `${zoomedTarget[0]}px`;
     impact.style.top = `${zoomedTarget[1]}px`;
   }
 
   used.add(current.id);
+  saveHistory();
 
   resultName.textContent = current.name;
   resultDesc.textContent = current.description;
@@ -687,20 +758,15 @@ function flyDart(start,end,duration){
       const x = start[0] + (end[0]-start[0])*t;
       const linearY = start[1] + (end[1]-start[1])*t;
 
-      /*
-        중앙에서 위로 크게 솟는 포물선.
-        다트가 아래에서 위쪽 지역으로 날아가는 느낌.
-      */
-      const arc = Math.sin(Math.PI*t) * Math.min(190, mapCard.clientHeight * .25);
+      /* 중앙에서 크게 솟는 포물선 */
+      const arc = Math.sin(Math.PI*t) * 170;
       const y = linearY - arc;
 
       /*
-        진행 방향에 맞춰 다트를 살짝 회전.
+        SVG 다트는 오른쪽 위 방향을 기본으로 만들어 두었기 때문에
+        진행 방향에 맞춰 살짝 회전시킨다.
       */
-      const dx = end[0] - start[0];
-      const dy = end[1] - start[1];
-      const direction = Math.atan2(dy,dx) * 180 / Math.PI;
-      const angle = direction + 90;
+      const angle = -18 + t*18;
 
       dart.style.left = `${x}px`;
       dart.style.top = `${y}px`;
@@ -713,7 +779,7 @@ function flyDart(start,end,duration){
         dart.style.left = `${end[0]}px`;
         dart.style.top = `${end[1]}px`;
         dart.style.transform =
-          `translate(-50%,-50%) rotate(${angle}deg)`;
+          `translate(-50%,-50%) rotate(0deg)`;
 
         resolve();
       }
@@ -731,35 +797,33 @@ function showImpact(point){
   impact.classList.add("show");
 }
 
-/* 다시 던지기 */
+/* 다시 */
 againButton.addEventListener("click",()=>{
   if(throwing) return;
 
   result.classList.remove("show");
   travelLinks.classList.remove("show");
-
-  /* 확대된 상태를 먼저 원상복귀 */
-  resetMapZoom(250);
-
   throwDart();
 });
 
-/* 여기로 결정 */
+/* 결정 */
 confirmButton.addEventListener("click",()=>{
   if(!current) return;
 
-  const name = current.name;
+  const q = encodeURIComponent(current.name);
 
   tourismLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(name+" 관광지")}`;
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 관광지")}`;
 
   foodLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(name+" 맛집")}`;
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 맛집")}`;
 
   hotelLink.href =
-    `https://www.google.com/search?q=${encodeURIComponent(name+" 숙소")}`;
+    `https://www.google.com/search?q=${encodeURIComponent(current.name+" 숙소")}`;
 
-  travelTitle.textContent = `📍 ${name} 여행 준비`;
+  travelTitle.textContent =
+    `📍 ${current.name} 여행 준비`;
+
   travelLinks.classList.add("show");
 
   setTimeout(()=>{
@@ -770,15 +834,30 @@ confirmButton.addEventListener("click",()=>{
   },80);
 });
 
-/* 화면 크기 변경 시 지도를 다시 그리지 않고 현재 상태 유지 */
-window.addEventListener("resize",()=>{
-  /*
-    모바일 브라우저 주소창이 열리고 닫힐 때
-    resize가 발생하므로 강제 재로드는 하지 않는다.
-    새로고침하면 정상적인 크기로 다시 계산된다.
-  */
+resetHistoryButton.addEventListener("click",()=>{
+  if(throwing) return;
+
+  const ok = confirm(
+    "지금까지의 추첨 기록과 결정된 여행지를 모두 초기화할까요?"
+  );
+  if(!ok) return;
+
+  used.clear();
+  confirmed.clear();
+  saveHistory();
+
+  svg?.selectAll(".region")
+    .classed("selected",false)
+    .classed("confirmed",false);
+
+  current = null;
+  result.classList.remove("show");
+  travelLinks.classList.remove("show");
+  confirmedNote.classList.remove("show");
+  status.textContent = `${candidates.length}개의 여행지를 준비했습니다.`;
 });
 
+loadHistory();
 loadMap();
 </script>
 </body>
