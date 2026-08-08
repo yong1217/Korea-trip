@@ -285,7 +285,7 @@ const tourismLink = $("tourismLink");
 const foodLink = $("foodLink");
 const hotelLink = $("hotelLink");
 
-let svg, path, projection;
+let svg, path, projection, mapLayer;
 let features = [];
 let candidates = [];
 let used = new Set();
@@ -351,14 +351,36 @@ function drawMap(collection){
   projection = d3.geoIdentity()
     .reflectY(true)
     .fitExtent(
-      [[28, 28], [width - 28, height - 92]],
+      [[8, 8], [width - 8, height - 55]],
       collection
     );
 
   path = d3.geoPath(projection);
 
-  svg.append("g")
+  /*
+    기본 지도도 조금 더 크게 보여준다.
+    지도의 중심을 기준으로 1.28배 확대한다.
+  */
+  const baseScale = projection.scale();
+  const baseTranslate = projection.translate();
+  const centerX = width / 2;
+  const centerY = height * .47;
+  projection
+    .scale(baseScale * 1.28)
+    .translate([
+      centerX + (baseTranslate[0] - centerX) * 1.28,
+      centerY + (baseTranslate[1] - centerY) * 1.28
+    ]);
+
+  path = d3.geoPath(projection);
+
+  mapLayer = svg.append("g")
+    .attr("class","map-layer");
+
+  mapLayer
+    .append("g")
     .attr("class","regions")
+    .selectAll("path")
     .selectAll("path")
     .data(features)
     .join("path")
@@ -535,6 +557,38 @@ function clampPoint(point){
   ];
 }
 
+/* 지도 확대/복귀 */
+function resetMapZoom(duration=450){
+  if(!mapLayer) return;
+  mapLayer.interrupt()
+    .transition()
+    .duration(duration)
+    .attr("transform", null);
+}
+
+function zoomMapTo(point, scale=1.72){
+  if(!mapLayer) return null;
+
+  const width = mapCard.clientWidth;
+  const height = mapCard.clientHeight;
+  const cx = width / 2;
+  const cy = height * .43;
+
+  const tx = cx + (point[0] - cx) * scale;
+  const ty = cy + (point[1] - cy) * scale;
+
+  mapLayer.interrupt()
+    .transition()
+    .duration(800)
+    .ease(d3.easeCubicInOut)
+    .attr(
+      "transform",
+      `translate(${cx - scale*cx}px,${cy - scale*cy}px) scale(${scale})`
+    );
+
+  return [tx, ty];
+}
+
 /* 다트 던지기 */
 dartButton.addEventListener("click", throwDart);
 
@@ -542,6 +596,9 @@ async function throwDart(){
   if(throwing || !projection) return;
 
   throwing = true;
+
+  /* 이전 결과에서 확대된 지도를 원래 크기로 되돌린다. */
+  resetMapZoom(250);
   current = getRandomCandidate();
 
   result.classList.remove("show");
@@ -574,6 +631,19 @@ async function throwDart(){
   );
 
   showImpact(target);
+
+  /*
+    맞은 지역을 부드럽게 확대한다.
+    확대 후 다트/충격 표시도 확대된 지역의 위치로 함께 이동시킨다.
+  */
+  const zoomedTarget = zoomMapTo(target, 1.72);
+
+  if(zoomedTarget){
+    dart.style.left = `${zoomedTarget[0]}px`;
+    dart.style.top = `${zoomedTarget[1]}px`;
+    impact.style.left = `${zoomedTarget[0]}px`;
+    impact.style.top = `${zoomedTarget[1]}px`;
+  }
 
   used.add(current.id);
 
