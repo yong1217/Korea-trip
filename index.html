@@ -340,7 +340,7 @@ function drawMap(collection){
 
   // 기본 지도 위치를 화면 중앙보다 살짝 오른쪽으로 이동
   // 모바일에서 대한민국 지도가 왼쪽으로 치우쳐 보이는 현상을 보정한다.
-  const mapShiftX = width * 0.035;
+  const mapShiftX = width * 0.105;
 
   projection
     .scale(baseScale * baseZoom)
@@ -557,28 +557,34 @@ function resetMapZoom(duration=350){
   확대된 point의 좌표가 cx, cy에 오도록
   translate 값을 계산한다.
 */
-function zoomMapTo(point, scale=1.65){
+function zoomMapTo(point, scale=1.72){
   if(!mapLayer) return null;
 
   const width = mapCard.clientWidth;
   const height = mapCard.clientHeight;
 
+  /* 확대 후 적중 지역이 화면의 정중앙보다 약간 위에 오도록 한다. */
   const cx = width / 2;
-  const cy = height * .43;
+  const cy = height * .42;
 
+  /*
+     현재 지도에서 target이 point에 있다.
+     scale 배율로 확대했을 때 target을 cx, cy로 보내려면
+     아래처럼 translate 해야 한다.
+  */
   const tx = cx - point[0] * scale;
   const ty = cy - point[1] * scale;
 
   mapLayer.interrupt()
     .transition()
-    .duration(900)
+    .duration(950)
     .ease(d3.easeCubicInOut)
     .attr(
       "transform",
-      `translate(${tx}px, ${ty}px) scale(${scale})`
+      `translate(${tx},${ty}) scale(${scale})`
     );
 
-  /* HTML 다트가 확대 후 놓일 화면 좌표 */
+  /* 확대 상태에서는 다트를 계속 숨긴다. */
   return [cx, cy];
 }
 
@@ -638,12 +644,13 @@ async function throwDart(){
     확대 대상이 화면 중앙에 오므로
     어느 지역을 뽑아도 지도 밖으로 사라지지 않는다.
   */
-  const zoomedTarget = zoomMapTo(target,1.65);
+  const zoomedTarget = zoomMapTo(target,1.72);
 
   if(zoomedTarget){
-    dart.style.left = `${zoomedTarget[0]}px`;
-    dart.style.top = `${zoomedTarget[1]}px`;
+    /* 다트는 확대 화면에 절대 다시 나타나지 않게 한다. */
+    dart.style.opacity = "0";
 
+    /* 충격 효과만 확대된 적중 위치를 따라간다. */
     impact.style.left = `${zoomedTarget[0]}px`;
     impact.style.top = `${zoomedTarget[1]}px`;
   }
